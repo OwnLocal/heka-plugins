@@ -10,3 +10,14 @@
    by Heka.
 
 Now you should be able to run `goat test` and have all the tests run.
+
+
+# Running the tests
+
+While developing, you should be running tests constantly.
+
+1. Install a notifier plugin via `brew install terminal-notifier` or
+   `sudo apt-get install notify-send`
+
+2. Run `./runtests.sh`. Let it keep running while you edit the code,
+   it will run the tests whenever you make changes.
