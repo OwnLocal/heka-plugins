@@ -1,0 +1,7 @@
+---
+path: github.com/OwnLocal/heka-plugins
+deps:
+  - loc: https://github.com/mozilla-services/heka.git
+    type: git
+    ref: v0.9.2
+    path: github.com/mozilla-services/heka
