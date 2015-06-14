@@ -7,3 +7,4 @@ deps:
     path: github.com/mozilla-services/heka
 
   - loc: github.com/onsi/ginkgo/ginkgo
+  - loc: github.com/onsi/gomega
