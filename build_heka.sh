@@ -1,7 +1,7 @@
 #!/bin/bash
 
-${CIRCLE_BUILD_NUM:=`git describe --always`}
-${CIRCLE_ARTIFACTS:=`pwd`}
+: ${CIRCLE_BUILD_NUM:=`git describe --always`}
+: ${CIRCLE_ARTIFACTS:=`pwd`}
 
 goat deps
 
