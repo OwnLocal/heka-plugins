@@ -7,6 +7,7 @@ goat deps
 
 export GOPATH=`goat env GOPATH`
 
+mkdir -p .goat/deps/src/github.com/mozilla-services/heka/externals
 rsync -a --exclude-from .gitignore `pwd`/ .goat/deps/src/github.com/mozilla-services/heka/externals/heka-plugins/
 
 pushd .goat/deps/src/github.com/mozilla-services/heka
