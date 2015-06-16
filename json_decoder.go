@@ -50,6 +50,6 @@ func decodeJson(jsonStr string, msg *message.Message) (err error) {
 	return
 }
 
-//TODO: write tests for this, for a symmetrical JsonEncoder, and write JsonEncoder
-//TODO: Add config options for which fields to take Uuid, Timestamp, Type, Logger, Severity, EnvVersion, Pid, Hostname? and also parse those nicely where possible (use ForgivingTimeParse for timestamp)
+//TODO: Add config options for which fields to take Uuid, Timestamp, Type, Logger, Severity, EnvVersion, Pid, Hostname? from and also parse those nicely where possible (use ForgivingTimeParse for timestamp)
+//TODO: Add config options for encoder on what fields to take from the Heka Message and what fields to put them in in the outgoing JSON
 //TODO: Write Decoder and/or filter that sets UUID based on Hashing fields and then converting to UUID format, using NewHash from go-uuid: http://godoc.org/code.google.com/p/go-uuid/uuid

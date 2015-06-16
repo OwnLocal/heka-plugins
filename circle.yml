@@ -1,0 +1,14 @@
+dependencies:
+  override:
+    - go get github.com/pib/goat
+    - goat deps
+
+  cache_directories:
+    - ".goat"
+
+test:
+  override:
+    - GOPATH=`pwd`/.goat/deps .goat/deps/bin/ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race
+
+  post:
+    - ./build_heka.sh
