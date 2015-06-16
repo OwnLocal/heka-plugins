@@ -2,6 +2,7 @@ dependencies:
   override:
     - go get github.com/pib/goat
     - goat deps
+    - ./devsetup.sh
 
   cache_directories:
     - ".goat"
