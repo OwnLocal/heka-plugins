@@ -1,4 +1,4 @@
 .goat
 *.test
 *.coverprofile
-heka-341e02c.tar.gz heka-b5dad23.tar.gz
+*.tar.gz

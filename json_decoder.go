@@ -2,25 +2,37 @@ package ol_heka
 
 import (
 	"encoding/json"
+	"time"
 	"unicode"
 
 	"github.com/mozilla-services/heka/message"
 	"github.com/mozilla-services/heka/pipeline"
 )
 
-type JsonDecoder struct{}
+type JsonDecoder struct {
+	config *JsonDecoderConfig
+}
+
+type JsonDecoderConfig struct {
+	TimestampField string
+}
 
 func (jd *JsonDecoder) Init(config interface{}) (err error) {
+	jd.config = config.(*JsonDecoderConfig)
 	return
+}
+
+func (jd *JsonDecoder) ConfigStruct() interface{} {
+	return new(JsonDecoderConfig)
 }
 
 func (jd *JsonDecoder) Decode(pack *pipeline.PipelinePack) (packs []*pipeline.PipelinePack, err error) {
 	packs = []*pipeline.PipelinePack{pack}
-	err = decodeJson(pack.Message.GetPayload(), pack.Message)
+	err = jd.decodeJson(pack.Message.GetPayload(), pack.Message)
 	return
 }
 
-func decodeJson(jsonStr string, msg *message.Message) (err error) {
+func (jd *JsonDecoder) decodeJson(jsonStr string, msg *message.Message) (err error) {
 	rawMap := make(map[string]*json.RawMessage)
 	if err = json.Unmarshal([]byte(jsonStr), &rawMap); err != nil {
 		return
@@ -45,6 +57,17 @@ func decodeJson(jsonStr string, msg *message.Message) (err error) {
 		if err != nil {
 			return
 		}
+
+		if jd.config.TimestampField != "" && key == jd.config.TimestampField {
+			var timestamp time.Time
+			timestamp, err = message.ForgivingTimeParse(time.RFC3339, field.GetValueString()[0], time.UTC)
+			if err != nil {
+				return
+			}
+			msg.SetTimestamp(timestamp.UnixNano())
+			continue
+		}
+
 		msg.AddField(field)
 	}
 	return

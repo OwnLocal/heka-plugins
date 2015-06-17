@@ -1,12 +1,12 @@
 package ol_heka_test
 
 import (
-	"sort"
 	"testing"
+	"time"
 
 	"github.com/OwnLocal/heka-plugins"
 	"github.com/mozilla-services/heka/message"
-	"github.com/mozilla-services/heka/pipeline"
+	"github.com/onsi/gomega"
 )
 
 func TestDecode(t *testing.T) {
@@ -47,22 +47,29 @@ func TestDecode(t *testing.T) {
 		},
 	}
 
-	decoder := ol_heka.JsonDecoder{}
-	pack := &pipeline.PipelinePack{}
+	dt := newDecoderTester(t, &ol_heka.JsonDecoder{}, &ol_heka.JsonDecoderConfig{})
 
 	for _, c := range cases {
-		pack.Message = &message.Message{Payload: &c.in}
-		packs, err := decoder.Decode(pack)
-		if err != nil {
-			t.Error(err)
-		}
+		dt.testDecode(c.in, c.want)
+	}
+}
 
-		// Sort both sets of fields so they compare properly.
-		sort.Sort(fields(packs[0].Message.Fields))
-		sort.Sort(c.want)
+func TestDecodeTimestamp(t *testing.T) {
+	cases := []struct {
+		in            string
+		wantTimestamp int64
+		wantFields    fields
+	}{
+		{`{"NotTimestamp": "2015-10-10T10:10:10"}`, 0, fields{newField("NotTimestamp", "2015-10-10T10:10:10", "")}},
+		{`{"@timestamp": "2015-10-10T10:10:10Z"}`, time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano(), nil},
+		{`{"@timestamp": "2015-10-10T10:10:10.12345Z"}`, time.Date(2015, 10, 10, 10, 10, 10, 123450000, time.UTC).UnixNano(), nil},
+		{`{"@timestamp": "2015-10-10T10:10:10Z", "foo": "bar"}`, time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano(), fields{newField("foo", "bar", "")}},
+	}
 
-		if !(&message.Message{Fields: packs[0].Message.Fields}).Equals(&message.Message{Fields: c.want}) {
-			t.Errorf("Expected\n%v\ngot\n%v", c.want, packs[0].Message.Fields)
-		}
+	dt := newDecoderTester(t, &ol_heka.JsonDecoder{}, &ol_heka.JsonDecoderConfig{TimestampField: "@timestamp"})
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+		gomega.Expect(dt.pack.Message.GetTimestamp()).To(gomega.Equal(c.wantTimestamp))
 	}
 }
