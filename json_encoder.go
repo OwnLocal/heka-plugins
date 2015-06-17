@@ -21,3 +21,7 @@ func (enc *JsonEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err 
 	output, err = json.Marshal(rawMap)
 	return
 }
+
+func init() {
+	pipeline.RegisterPlugin("JsonEncoder", func() interface{} { return new(JsonEncoder) })
+}
