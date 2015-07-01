@@ -73,3 +73,21 @@ func TestDecodeTimestamp(t *testing.T) {
 		gomega.Expect(dt.pack.Message.GetTimestamp()).To(gomega.Equal(c.wantTimestamp))
 	}
 }
+
+func TestDecodeUuid(t *testing.T) {
+	cases := []struct {
+		in         string
+		wantUuid   string
+		wantFields fields
+	}{
+		{`{"NotUuid": "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d"}`, "", fields{newField("NotUuid", "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d", "")}},
+		{`{"@uuid": "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d"}`, "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d", nil},
+	}
+
+	dt := newDecoderTester(t, &ol_heka.JsonDecoder{}, &ol_heka.JsonDecoderConfig{UuidField: "@uuid"})
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+		gomega.Expect(dt.pack.Message.GetUuidString()).To(gomega.Equal(c.wantUuid))
+	}
+}

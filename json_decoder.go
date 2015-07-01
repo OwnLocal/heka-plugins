@@ -2,8 +2,11 @@ package ol_heka
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 	"unicode"
+
+	"code.google.com/p/go-uuid/uuid"
 
 	"github.com/mozilla-services/heka/message"
 	"github.com/mozilla-services/heka/pipeline"
@@ -14,11 +17,43 @@ type JsonDecoder struct {
 }
 
 type JsonDecoderConfig struct {
-	TimestampField string
+	TimestampField string `toml:"timestamp_field"`
+	UuidField      string `toml:"uuid_field"`
+	fieldMap       map[string]func(*message.Message, *message.Field) error
+}
+
+func (conf *JsonDecoderConfig) buildFieldMap() {
+	conf.fieldMap = make(map[string]func(*message.Message, *message.Field) error)
+	if conf.TimestampField != "" {
+		conf.fieldMap[conf.TimestampField] = conf.decodeTimestamp
+	}
+	if conf.UuidField != "" {
+		conf.fieldMap[conf.UuidField] = conf.decodeUuid
+
+	}
+}
+
+func (conf *JsonDecoderConfig) decodeTimestamp(msg *message.Message, field *message.Field) error {
+	timestamp, err := message.ForgivingTimeParse(time.RFC3339, field.GetValueString()[0], time.UTC)
+	if err != nil {
+		return err
+	}
+	msg.SetTimestamp(timestamp.UnixNano())
+	return nil
+}
+
+func (conf *JsonDecoderConfig) decodeUuid(msg *message.Message, field *message.Field) error {
+	u := uuid.Parse(field.GetValueString()[0])
+	if u == nil {
+		return fmt.Errorf("Not a valid UUID: %s", field.GetValueString()[0])
+	}
+	msg.SetUuid(u)
+	return nil
 }
 
 func (jd *JsonDecoder) Init(config interface{}) (err error) {
 	jd.config = config.(*JsonDecoderConfig)
+	jd.config.buildFieldMap()
 	return
 }
 
@@ -58,13 +93,11 @@ func (jd *JsonDecoder) decodeJson(jsonStr string, msg *message.Message) (err err
 			return
 		}
 
-		if jd.config.TimestampField != "" && key == jd.config.TimestampField {
-			var timestamp time.Time
-			timestamp, err = message.ForgivingTimeParse(time.RFC3339, field.GetValueString()[0], time.UTC)
+		if fieldFn, ok := jd.config.fieldMap[key]; ok {
+			err = fieldFn(msg, field)
 			if err != nil {
 				return
 			}
-			msg.SetTimestamp(timestamp.UnixNano())
 			continue
 		}
 
