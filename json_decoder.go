@@ -122,9 +122,14 @@ func (conf *JsonDecoderConfig) decodeTimestamp(msg *message.Message, field *mess
 }
 
 func (conf *JsonDecoderConfig) decodeUuid(msg *message.Message, field *message.Field) error {
-	u := uuid.Parse(field.GetValueString()[0])
+	var u uuid.UUID
+
+	if *(field.ValueType) == message.Field_STRING {
+		u = uuid.Parse(field.GetValueString()[0])
+	}
+
 	if u == nil {
-		return fmt.Errorf("Not a valid UUID: %s", field.GetValueString()[0])
+		return fmt.Errorf("Not a valid UUID: %s", field.String())
 	}
 	msg.SetUuid(u)
 	return nil
@@ -132,9 +137,11 @@ func (conf *JsonDecoderConfig) decodeUuid(msg *message.Message, field *message.F
 
 func (conf *JsonDecoderConfig) decodeStringField(setter func(*message.Message, string)) func(*message.Message, *message.Field) error {
 	return func(msg *message.Message, field *message.Field) error {
-		v := field.GetValueString()[0]
-		if v != "" {
-			setter(msg, v)
+		if *(field.ValueType) == message.Field_STRING {
+			v := field.GetValueString()[0]
+			if v != "" {
+				setter(msg, v)
+			}
 		}
 		return nil
 	}

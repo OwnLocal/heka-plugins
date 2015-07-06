@@ -1,6 +1,7 @@
 package hekalocal_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -79,6 +80,19 @@ func TestDecodeTimestamp(t *testing.T) {
 	}
 }
 
+func TestDecodeBadTimestamp(t *testing.T) {
+	cases := []interface{}{
+		"2015-10T10:10:10Z",
+		"Not even close",
+	}
+
+	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{TimestampField: "@timestamp"})
+
+	for _, c := range cases {
+		Expect(dt.testDecodeError(fmt.Sprintf(`{"@timestamp": %#v}`, c))).To(HaveOccurred())
+	}
+}
+
 func TestDecodeUuid(t *testing.T) {
 	cases := []struct {
 		in         string
@@ -98,17 +112,17 @@ func TestDecodeUuid(t *testing.T) {
 }
 
 func TestDecodeBadUuid(t *testing.T) {
-	cases := []struct {
-		in        string
-		wantError interface{}
-	}{
-		{`{"@uuid": "8fa6b692-5696-41f5-a0ba"}`, ContainSubstring("Not a valid UUID")},
+	cases := []string{
+		`{"@uuid": "8fa6b692-5696-41f5-a0ba"}`,
+		`{"@uuid": 42}`,
+		`{"@uuid": false}`,
+		`{"@uuid": null}`,
 	}
 
 	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{UuidField: "@uuid"})
 
 	for _, c := range cases {
-		dt.testDecodeError(c.in, c.wantError)
+		Expect(dt.testDecodeError(c)).To(MatchError(ContainSubstring("Not a valid UUID")))
 	}
 }
 
@@ -120,6 +134,7 @@ func TestDecodeType(t *testing.T) {
 	}{
 		{`{"NotType": "rails-log"}`, "", fields{newField("NotType", "rails-log", "")}},
 		{`{"@type": "rails-log"}`, "rails-log", nil},
+		{`{"@type": 42}`, "", nil},
 	}
 
 	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{TypeField: "@type"})
