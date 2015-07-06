@@ -64,6 +64,11 @@ func TestDecodeTimestamp(t *testing.T) {
 		{`{"@timestamp": "2015-10-10T10:10:10Z"}`, time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano(), nil},
 		{`{"@timestamp": "2015-10-10T10:10:10.12345Z"}`, time.Date(2015, 10, 10, 10, 10, 10, 123450000, time.UTC).UnixNano(), nil},
 		{`{"@timestamp": "2015-10-10T10:10:10Z", "foo": "bar"}`, time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano(), fields{newField("foo", "bar", "")}},
+		{`{"@timestamp": 1444471810000000000, "foo": "bar"}`, time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano(), fields{newField("foo", "bar", "")}},
+		{`{"@timestamp": 1444471810.0, "foo": "bar"}`, time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano(), fields{newField("foo", "bar", "")}},
+		{`{"@timestamp": 1444471810, "foo": "bar"}`, time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano(), fields{newField("foo", "bar", "")}},
+		{`{"@timestamp": false, "foo": "bar"}`, 0, fields{newField("foo", "bar", "")}},
+		{`{"@timestamp": null, "foo": "bar"}`, 0, fields{newField("foo", "bar", "")}},
 	}
 
 	dt := newDecoderTester(t, &ol_heka.JsonDecoder{}, &ol_heka.JsonDecoderConfig{TimestampField: "@timestamp"})
@@ -89,5 +94,23 @@ func TestDecodeUuid(t *testing.T) {
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
 		gomega.Expect(dt.pack.Message.GetUuidString()).To(gomega.Equal(c.wantUuid))
+	}
+}
+
+func TestDecodeType(t *testing.T) {
+	cases := []struct {
+		in         string
+		wantType   string
+		wantFields fields
+	}{
+		{`{"NotType": "rails-log"}`, "", fields{newField("NotType", "rails-log", "")}},
+		{`{"@type": "rails-log"}`, "rails-log", nil},
+	}
+
+	dt := newDecoderTester(t, &ol_heka.JsonDecoder{}, &ol_heka.JsonDecoderConfig{TypeField: "@type"})
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+		gomega.Expect(dt.pack.Message.GetType()).To(gomega.Equal(c.wantType))
 	}
 }

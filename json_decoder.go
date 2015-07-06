@@ -19,36 +19,8 @@ type JsonDecoder struct {
 type JsonDecoderConfig struct {
 	TimestampField string `toml:"timestamp_field"`
 	UuidField      string `toml:"uuid_field"`
+	TypeField      string `toml:"type_field"`
 	fieldMap       map[string]func(*message.Message, *message.Field) error
-}
-
-func (conf *JsonDecoderConfig) buildFieldMap() {
-	conf.fieldMap = make(map[string]func(*message.Message, *message.Field) error)
-	if conf.TimestampField != "" {
-		conf.fieldMap[conf.TimestampField] = conf.decodeTimestamp
-	}
-	if conf.UuidField != "" {
-		conf.fieldMap[conf.UuidField] = conf.decodeUuid
-
-	}
-}
-
-func (conf *JsonDecoderConfig) decodeTimestamp(msg *message.Message, field *message.Field) error {
-	timestamp, err := message.ForgivingTimeParse(time.RFC3339, field.GetValueString()[0], time.UTC)
-	if err != nil {
-		return err
-	}
-	msg.SetTimestamp(timestamp.UnixNano())
-	return nil
-}
-
-func (conf *JsonDecoderConfig) decodeUuid(msg *message.Message, field *message.Field) error {
-	u := uuid.Parse(field.GetValueString()[0])
-	if u == nil {
-		return fmt.Errorf("Not a valid UUID: %s", field.GetValueString()[0])
-	}
-	msg.SetUuid(u)
-	return nil
 }
 
 func (jd *JsonDecoder) Init(config interface{}) (err error) {
@@ -104,6 +76,68 @@ func (jd *JsonDecoder) decodeJson(jsonStr string, msg *message.Message) (err err
 		msg.AddField(field)
 	}
 	return
+}
+
+func (conf *JsonDecoderConfig) buildFieldMap() {
+	conf.fieldMap = make(map[string]func(*message.Message, *message.Field) error)
+	for _, f := range []struct {
+		name string
+		fn   func(*message.Message, *message.Field) error
+	}{
+		{conf.TimestampField, conf.decodeTimestamp},
+		{conf.UuidField, conf.decodeUuid},
+		{conf.TypeField, conf.decodeStringField((*message.Message).SetType)},
+	} {
+		if f.name != "" {
+			conf.fieldMap[f.name] = f.fn
+		}
+	}
+}
+
+func (conf *JsonDecoderConfig) decodeTimestamp(msg *message.Message, field *message.Field) error {
+	var (
+		timestamp time.Time
+		err       error
+	)
+	switch *(field.ValueType) {
+	case message.Field_STRING:
+		timestamp, err = message.ForgivingTimeParse(time.RFC3339, field.GetValueString()[0], time.UTC)
+	case message.Field_DOUBLE:
+		v := field.GetValueDouble()[0]
+
+		if v < 10000000000000 {
+			v *= 1000000000
+		}
+
+		timestamp = time.Unix(int64(v)/1000000000, int64(v)%1000000000)
+	default:
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+	msg.SetTimestamp(timestamp.UnixNano())
+	return nil
+}
+
+func (conf *JsonDecoderConfig) decodeUuid(msg *message.Message, field *message.Field) error {
+	u := uuid.Parse(field.GetValueString()[0])
+	if u == nil {
+		return fmt.Errorf("Not a valid UUID: %s", field.GetValueString()[0])
+	}
+	msg.SetUuid(u)
+	return nil
+}
+
+func (conf *JsonDecoderConfig) decodeStringField(setter func(*message.Message, string)) func(*message.Message, *message.Field) error {
+	return func(msg *message.Message, field *message.Field) error {
+		v := field.GetValueString()[0]
+		if v != "" {
+			setter(msg, v)
+		}
+		return nil
+	}
 }
 
 //TODO: Add config options for which fields to take Uuid, Timestamp, Type, Logger, Severity, EnvVersion, Pid, Hostname? from and also parse those nicely where possible (use ForgivingTimeParse for timestamp)
