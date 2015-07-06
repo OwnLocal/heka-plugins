@@ -40,26 +40,26 @@ func (jd *JsonDecoder) Decode(pack *pipeline.PipelinePack) (packs []*pipeline.Pi
 }
 
 func (jd *JsonDecoder) decodeJson(jsonStr string, msg *message.Message) (err error) {
-	rawMap := make(map[string]*json.RawMessage)
+	rawMap := make(map[string]json.RawMessage)
 	if err = json.Unmarshal([]byte(jsonStr), &rawMap); err != nil {
 		return
 	}
 
 	for key, raw := range rawMap {
 		var field *message.Field
-		rawS := string(*raw)
+		rawS := string(raw)
 		rb := rune(rawS[0])
 
 		// If it's a number, string, or bool, decode it.
 		if unicode.IsDigit(rb) || rb == '-' || rb == '"' || rawS == "true" || rawS == "false" {
 			var val interface{}
-			if err = json.Unmarshal(*raw, &val); err != nil {
+			if err = json.Unmarshal(raw, &val); err != nil {
 				return
 			}
 			field, err = message.NewField(key, val, "")
 		} else {
 			// If it's an object, array, or null, leave it as encoded JSON.
-			field, err = message.NewField(key, []byte(*raw), "json")
+			field, err = message.NewField(key, []byte(raw), "json")
 		}
 		if err != nil {
 			return
