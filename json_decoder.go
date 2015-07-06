@@ -1,4 +1,4 @@
-package ol_heka
+package hekalocal
 
 import (
 	"encoding/json"

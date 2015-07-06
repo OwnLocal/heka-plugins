@@ -1,4 +1,4 @@
-package ol_heka_test
+package hekalocal_test
 
 import (
 	"testing"
@@ -49,7 +49,7 @@ func TestEncode(t *testing.T) {
 		},
 	}
 
-	encoder := ol_heka.JsonEncoder{}
+	encoder := hekalocal.JsonEncoder{}
 	pack := &pipeline.PipelinePack{}
 
 	for _, c := range cases {

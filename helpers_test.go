@@ -1,4 +1,4 @@
-package ol_heka_test
+package hekalocal_test
 
 import (
 	"sort"

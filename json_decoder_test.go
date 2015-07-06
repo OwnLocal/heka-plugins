@@ -1,4 +1,4 @@
-package ol_heka_test
+package hekalocal_test
 
 import (
 	"testing"
@@ -47,7 +47,7 @@ func TestDecode(t *testing.T) {
 		},
 	}
 
-	dt := newDecoderTester(t, &ol_heka.JsonDecoder{}, &ol_heka.JsonDecoderConfig{})
+	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{})
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.want)
@@ -71,7 +71,7 @@ func TestDecodeTimestamp(t *testing.T) {
 		{`{"@timestamp": null, "foo": "bar"}`, 0, fields{newField("foo", "bar", "")}},
 	}
 
-	dt := newDecoderTester(t, &ol_heka.JsonDecoder{}, &ol_heka.JsonDecoderConfig{TimestampField: "@timestamp"})
+	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{TimestampField: "@timestamp"})
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
@@ -89,7 +89,7 @@ func TestDecodeUuid(t *testing.T) {
 		{`{"@uuid": "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d"}`, "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d", nil},
 	}
 
-	dt := newDecoderTester(t, &ol_heka.JsonDecoder{}, &ol_heka.JsonDecoderConfig{UuidField: "@uuid"})
+	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{UuidField: "@uuid"})
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
@@ -107,7 +107,7 @@ func TestDecodeType(t *testing.T) {
 		{`{"@type": "rails-log"}`, "rails-log", nil},
 	}
 
-	dt := newDecoderTester(t, &ol_heka.JsonDecoder{}, &ol_heka.JsonDecoderConfig{TypeField: "@type"})
+	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{TypeField: "@type"})
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
