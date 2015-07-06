@@ -6,7 +6,7 @@ import (
 
 	"github.com/OwnLocal/heka-plugins"
 	"github.com/mozilla-services/heka/message"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 )
 
 func TestDecode(t *testing.T) {
@@ -75,7 +75,7 @@ func TestDecodeTimestamp(t *testing.T) {
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
-		gomega.Expect(dt.pack.Message.GetTimestamp()).To(gomega.Equal(c.wantTimestamp))
+		Expect(dt.pack.Message.GetTimestamp()).To(Equal(c.wantTimestamp))
 	}
 }
 
@@ -93,7 +93,22 @@ func TestDecodeUuid(t *testing.T) {
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
-		gomega.Expect(dt.pack.Message.GetUuidString()).To(gomega.Equal(c.wantUuid))
+		Expect(dt.pack.Message.GetUuidString()).To(Equal(c.wantUuid))
+	}
+}
+
+func TestDecodeBadUuid(t *testing.T) {
+	cases := []struct {
+		in        string
+		wantError interface{}
+	}{
+		{`{"@uuid": "8fa6b692-5696-41f5-a0ba"}`, ContainSubstring("Not a valid UUID")},
+	}
+
+	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{UuidField: "@uuid"})
+
+	for _, c := range cases {
+		dt.testDecodeError(c.in, c.wantError)
 	}
 }
 
@@ -111,6 +126,6 @@ func TestDecodeType(t *testing.T) {
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
-		gomega.Expect(dt.pack.Message.GetType()).To(gomega.Equal(c.wantType))
+		Expect(dt.pack.Message.GetType()).To(Equal(c.wantType))
 	}
 }

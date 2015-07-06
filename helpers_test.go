@@ -66,3 +66,13 @@ func (dt *decoderTester) testDecode(payload string, expectedFields fields) []*pi
 
 	return packs
 }
+
+func (dt *decoderTester) testDecodeError(payload string, expectedError interface{}) {
+	// Set up the pack and run the decoder.
+	dt.pack = &pipeline.PipelinePack{}
+	dt.pack.Message = &message.Message{Payload: &payload}
+	packs, err := dt.decoder.Decode(dt.pack)
+
+	gomega.Expect(packs[0].Message.Fields).To(gomega.BeEmpty())
+	gomega.Expect(err).To(gomega.MatchError(expectedError))
+}
