@@ -126,21 +126,37 @@ func TestDecodeBadUUID(t *testing.T) {
 	}
 }
 
-func TestDecodeType(t *testing.T) {
-	cases := []struct {
-		in         string
-		wantType   string
-		wantFields fields
+func TestDecodeStringFields(t *testing.T) {
+	conf := hekalocal.JSONDecoderConfig{}
+
+	for _, f := range []struct {
+		name     string
+		field    *string
+		getField func(*message.Message) string
 	}{
-		{`{"NotType": "rails-log"}`, "", fields{newField("NotType", "rails-log", "")}},
-		{`{"@type": "rails-log"}`, "rails-log", nil},
-		{`{"@type": 42}`, "", nil},
-	}
+		{"type", &conf.TypeField, (*message.Message).GetType},
+		{"logger", &conf.LoggerField, (*message.Message).GetLogger},
+		{"env_version", &conf.EnvVersionField, (*message.Message).GetEnvVersion},
+		{"hostname", &conf.HostnameField, (*message.Message).GetHostname},
+	} {
+		*f.field = f.name
+		dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &conf)
 
-	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{TypeField: "@type"})
+		cases := []struct {
+			in         string
+			wantVal    string
+			wantFields fields
+		}{
+			{`{"NotField": "not-val"}`, "", fields{newField("NotField", "not-val", "")}},
+			{fmt.Sprintf(`{"%s": "good-val"}`, f.name), "good-val", nil},
+			{fmt.Sprintf(`{"%s": 42}`, f.name), "", nil},
+		}
 
-	for _, c := range cases {
-		dt.testDecode(c.in, c.wantFields)
-		Expect(dt.pack.Message.GetType()).To(Equal(c.wantType))
+		for _, c := range cases {
+			dt.testDecode(c.in, c.wantFields)
+			Expect(f.getField(dt.pack.Message)).To(Equal(c.wantVal))
+		}
+
+		*f.field = ""
 	}
 }

@@ -18,12 +18,17 @@ type JSONDecoder struct {
 	config *JSONDecoderConfig
 }
 
+type fieldDecoder func(*message.Message, *message.Field) error
+
 // JSONDecoderConfig contains the optional field names from which to extract message fields.
 type JSONDecoderConfig struct {
-	TimestampField string `toml:"timestamp_field"`
-	UUIDField      string `toml:"uuid_field"`
-	TypeField      string `toml:"type_field"`
-	fieldMap       map[string]func(*message.Message, *message.Field) error
+	TimestampField  string `toml:"timestamp_field"`
+	UUIDField       string `toml:"uuid_field"`
+	TypeField       string `toml:"type_field"`
+	LoggerField     string `toml:"logger_field"`
+	EnvVersionField string `toml:"env_version_field"`
+	HostnameField   string `toml:"hostname_field"`
+	fieldMap        map[string]fieldDecoder
 }
 
 // Init is provided to make JSONDecoder implement the Heka pipeline.Plugin interface.
@@ -85,7 +90,7 @@ func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) (err err
 }
 
 func (conf *JSONDecoderConfig) buildFieldMap() {
-	conf.fieldMap = make(map[string]func(*message.Message, *message.Field) error)
+	conf.fieldMap = make(map[string]fieldDecoder)
 	for _, f := range []struct {
 		name string
 		fn   func(*message.Message, *message.Field) error
@@ -93,6 +98,9 @@ func (conf *JSONDecoderConfig) buildFieldMap() {
 		{conf.TimestampField, conf.decodeTimestamp},
 		{conf.UUIDField, conf.decodeUUID},
 		{conf.TypeField, conf.decodeStringField((*message.Message).SetType)},
+		{conf.LoggerField, conf.decodeStringField((*message.Message).SetLogger)},
+		{conf.EnvVersionField, conf.decodeStringField((*message.Message).SetEnvVersion)},
+		{conf.HostnameField, conf.decodeStringField((*message.Message).SetHostname)},
 	} {
 		if f.name != "" {
 			conf.fieldMap[f.name] = f.fn
@@ -111,10 +119,12 @@ func (conf *JSONDecoderConfig) decodeTimestamp(msg *message.Message, field *mess
 	case message.Field_DOUBLE:
 		v := field.GetValueDouble()[0]
 
+		// Anything with < 14 digits is *probably* epoch seconds rather than microseconds.
 		if v < 10000000000000 {
 			v *= 1000000000
 		}
 
+		// time.Unix takes seconds and microseconds, so convert microseconds to those.
 		timestamp = time.Unix(int64(v)/1000000000, int64(v)%1000000000)
 	default:
 		return nil
@@ -141,7 +151,7 @@ func (conf *JSONDecoderConfig) decodeUUID(msg *message.Message, field *message.F
 	return nil
 }
 
-func (conf *JSONDecoderConfig) decodeStringField(setter func(*message.Message, string)) func(*message.Message, *message.Field) error {
+func (conf *JSONDecoderConfig) decodeStringField(setter func(*message.Message, string)) fieldDecoder {
 	return func(msg *message.Message, field *message.Field) error {
 		if *(field.ValueType) == message.Field_STRING {
 			v := field.GetValueString()[0]
