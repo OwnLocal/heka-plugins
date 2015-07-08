@@ -7,8 +7,10 @@ import (
 	"github.com/mozilla-services/heka/pipeline"
 )
 
+// JSONEncoder serializes messages to JSON.
 type JSONEncoder struct{}
 
+// Encode is implemented to make JSONEncoder implement the pipeline.Encoder interface.
 func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err error) {
 	rawMap := make(map[string]interface{})
 	for _, field := range pack.Message.GetFields() {

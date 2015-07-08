@@ -12,10 +12,13 @@ import (
 	"github.com/mozilla-services/heka/pipeline"
 )
 
+// JSONDecoder parses JSON message payloads and fills their contents into the message fields. It
+// also optionally fills in the Timestamp, UUID, and Type message fields.
 type JSONDecoder struct {
 	config *JSONDecoderConfig
 }
 
+// JSONDecoderConfig contains the optional field names from which to extract message fields.
 type JSONDecoderConfig struct {
 	TimestampField string `toml:"timestamp_field"`
 	UUIDField      string `toml:"uuid_field"`
@@ -23,16 +26,19 @@ type JSONDecoderConfig struct {
 	fieldMap       map[string]func(*message.Message, *message.Field) error
 }
 
+// Init is provided to make JSONDecoder implement the Heka pipeline.Plugin interface.
 func (jd *JSONDecoder) Init(config interface{}) (err error) {
 	jd.config = config.(*JSONDecoderConfig)
 	jd.config.buildFieldMap()
 	return
 }
 
+// ConfigStruct is provided to make JSONDecoder implement the Heka pipeline.HasConfigStruct interface.
 func (jd *JSONDecoder) ConfigStruct() interface{} {
 	return new(JSONDecoderConfig)
 }
 
+// Decode is provided to make JSONDecoder implement the Heka pipeline.Decoder interface.
 func (jd *JSONDecoder) Decode(pack *pipeline.PipelinePack) (packs []*pipeline.PipelinePack, err error) {
 	packs = []*pipeline.PipelinePack{pack}
 	err = jd.decodeJSON(pack.Message.GetPayload(), pack.Message)
