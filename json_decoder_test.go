@@ -93,10 +93,10 @@ func TestDecodeBadTimestamp(t *testing.T) {
 	}
 }
 
-func TestDecodeUuid(t *testing.T) {
+func TestDecodeUUID(t *testing.T) {
 	cases := []struct {
 		in         string
-		wantUuid   string
+		wantUUID   string
 		wantFields fields
 	}{
 		{`{"NotUuid": "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d"}`, "", fields{newField("NotUuid", "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d", "")}},
@@ -107,11 +107,11 @@ func TestDecodeUuid(t *testing.T) {
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
-		Expect(dt.pack.Message.GetUuidString()).To(Equal(c.wantUuid))
+		Expect(dt.pack.Message.GetUuidString()).To(Equal(c.wantUUID))
 	}
 }
 
-func TestDecodeBadUuid(t *testing.T) {
+func TestDecodeBadUUID(t *testing.T) {
 	cases := []string{
 		`{"@uuid": "8fa6b692-5696-41f5-a0ba"}`,
 		`{"@uuid": 42}`,
