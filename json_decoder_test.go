@@ -48,7 +48,7 @@ func TestDecode(t *testing.T) {
 		},
 	}
 
-	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{})
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{})
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.want)
@@ -72,7 +72,7 @@ func TestDecodeTimestamp(t *testing.T) {
 		{`{"@timestamp": null, "foo": "bar"}`, 0, fields{newField("foo", "bar", "")}},
 	}
 
-	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{TimestampField: "@timestamp"})
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{TimestampField: "@timestamp"})
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
@@ -86,7 +86,7 @@ func TestDecodeBadTimestamp(t *testing.T) {
 		"Not even close",
 	}
 
-	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{TimestampField: "@timestamp"})
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{TimestampField: "@timestamp"})
 
 	for _, c := range cases {
 		Expect(dt.testDecodeError(fmt.Sprintf(`{"@timestamp": %#v}`, c))).To(HaveOccurred())
@@ -103,7 +103,7 @@ func TestDecodeUuid(t *testing.T) {
 		{`{"@uuid": "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d"}`, "8fa6b692-5696-41f5-a0ba-a32f9c6d8d6d", nil},
 	}
 
-	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{UuidField: "@uuid"})
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{UUIDField: "@uuid"})
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
@@ -119,7 +119,7 @@ func TestDecodeBadUuid(t *testing.T) {
 		`{"@uuid": null}`,
 	}
 
-	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{UuidField: "@uuid"})
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{UUIDField: "@uuid"})
 
 	for _, c := range cases {
 		Expect(dt.testDecodeError(c)).To(MatchError(ContainSubstring("Not a valid UUID")))
@@ -137,7 +137,7 @@ func TestDecodeType(t *testing.T) {
 		{`{"@type": 42}`, "", nil},
 	}
 
-	dt := newDecoderTester(t, &hekalocal.JsonDecoder{}, &hekalocal.JsonDecoderConfig{TypeField: "@type"})
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{TypeField: "@type"})
 
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)

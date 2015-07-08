@@ -7,9 +7,9 @@ import (
 	"github.com/mozilla-services/heka/pipeline"
 )
 
-type JsonEncoder struct{}
+type JSONEncoder struct{}
 
-func (enc *JsonEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err error) {
+func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err error) {
 	rawMap := make(map[string]interface{})
 	for _, field := range pack.Message.GetFields() {
 		if field.GetValueType() == message.Field_BYTES && field.GetRepresentation() == "json" {
@@ -23,5 +23,5 @@ func (enc *JsonEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err 
 }
 
 func init() {
-	pipeline.RegisterPlugin("JsonEncoder", func() interface{} { return new(JsonEncoder) })
+	pipeline.RegisterPlugin("JSONEncoder", func() interface{} { return new(JSONEncoder) })
 }

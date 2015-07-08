@@ -12,34 +12,34 @@ import (
 	"github.com/mozilla-services/heka/pipeline"
 )
 
-type JsonDecoder struct {
-	config *JsonDecoderConfig
+type JSONDecoder struct {
+	config *JSONDecoderConfig
 }
 
-type JsonDecoderConfig struct {
+type JSONDecoderConfig struct {
 	TimestampField string `toml:"timestamp_field"`
-	UuidField      string `toml:"uuid_field"`
+	UUIDField      string `toml:"uuid_field"`
 	TypeField      string `toml:"type_field"`
 	fieldMap       map[string]func(*message.Message, *message.Field) error
 }
 
-func (jd *JsonDecoder) Init(config interface{}) (err error) {
-	jd.config = config.(*JsonDecoderConfig)
+func (jd *JSONDecoder) Init(config interface{}) (err error) {
+	jd.config = config.(*JSONDecoderConfig)
 	jd.config.buildFieldMap()
 	return
 }
 
-func (jd *JsonDecoder) ConfigStruct() interface{} {
-	return new(JsonDecoderConfig)
+func (jd *JSONDecoder) ConfigStruct() interface{} {
+	return new(JSONDecoderConfig)
 }
 
-func (jd *JsonDecoder) Decode(pack *pipeline.PipelinePack) (packs []*pipeline.PipelinePack, err error) {
+func (jd *JSONDecoder) Decode(pack *pipeline.PipelinePack) (packs []*pipeline.PipelinePack, err error) {
 	packs = []*pipeline.PipelinePack{pack}
-	err = jd.decodeJson(pack.Message.GetPayload(), pack.Message)
+	err = jd.decodeJSON(pack.Message.GetPayload(), pack.Message)
 	return
 }
 
-func (jd *JsonDecoder) decodeJson(jsonStr string, msg *message.Message) (err error) {
+func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) (err error) {
 	rawMap := make(map[string]json.RawMessage)
 	if err = json.Unmarshal([]byte(jsonStr), &rawMap); err != nil {
 		return
@@ -78,14 +78,14 @@ func (jd *JsonDecoder) decodeJson(jsonStr string, msg *message.Message) (err err
 	return
 }
 
-func (conf *JsonDecoderConfig) buildFieldMap() {
+func (conf *JSONDecoderConfig) buildFieldMap() {
 	conf.fieldMap = make(map[string]func(*message.Message, *message.Field) error)
 	for _, f := range []struct {
 		name string
 		fn   func(*message.Message, *message.Field) error
 	}{
 		{conf.TimestampField, conf.decodeTimestamp},
-		{conf.UuidField, conf.decodeUuid},
+		{conf.UUIDField, conf.decodeUUID},
 		{conf.TypeField, conf.decodeStringField((*message.Message).SetType)},
 	} {
 		if f.name != "" {
@@ -94,7 +94,7 @@ func (conf *JsonDecoderConfig) buildFieldMap() {
 	}
 }
 
-func (conf *JsonDecoderConfig) decodeTimestamp(msg *message.Message, field *message.Field) error {
+func (conf *JSONDecoderConfig) decodeTimestamp(msg *message.Message, field *message.Field) error {
 	var (
 		timestamp time.Time
 		err       error
@@ -121,7 +121,7 @@ func (conf *JsonDecoderConfig) decodeTimestamp(msg *message.Message, field *mess
 	return nil
 }
 
-func (conf *JsonDecoderConfig) decodeUuid(msg *message.Message, field *message.Field) error {
+func (conf *JSONDecoderConfig) decodeUUID(msg *message.Message, field *message.Field) error {
 	var u uuid.UUID
 
 	if *(field.ValueType) == message.Field_STRING {
@@ -135,7 +135,7 @@ func (conf *JsonDecoderConfig) decodeUuid(msg *message.Message, field *message.F
 	return nil
 }
 
-func (conf *JsonDecoderConfig) decodeStringField(setter func(*message.Message, string)) func(*message.Message, *message.Field) error {
+func (conf *JSONDecoderConfig) decodeStringField(setter func(*message.Message, string)) func(*message.Message, *message.Field) error {
 	return func(msg *message.Message, field *message.Field) error {
 		if *(field.ValueType) == message.Field_STRING {
 			v := field.GetValueString()[0]
@@ -152,5 +152,5 @@ func (conf *JsonDecoderConfig) decodeStringField(setter func(*message.Message, s
 //TODO: Write Decoder and/or filter that sets UUID based on Hashing fields and then converting to UUID format, using NewHash from go-uuid: http://godoc.org/code.google.com/p/go-uuid/uuid
 
 func init() {
-	pipeline.RegisterPlugin("JsonDecoder", func() interface{} { return new(JsonDecoder) })
+	pipeline.RegisterPlugin("JSONDecoder", func() interface{} { return new(JSONDecoder) })
 }

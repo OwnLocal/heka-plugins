@@ -49,7 +49,7 @@ func TestEncode(t *testing.T) {
 		},
 	}
 
-	encoder := hekalocal.JsonEncoder{}
+	encoder := hekalocal.JSONEncoder{}
 	pack := &pipeline.PipelinePack{}
 
 	for _, c := range cases {
