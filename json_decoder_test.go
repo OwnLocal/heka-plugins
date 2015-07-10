@@ -160,3 +160,37 @@ func TestDecodeStringFields(t *testing.T) {
 		*f.field = ""
 	}
 }
+
+func TestDecodeIntFields(t *testing.T) {
+	conf := hekalocal.JSONDecoderConfig{}
+
+	for _, f := range []struct {
+		name       string
+		field      *string
+		getField   func(*message.Message) int32
+		defaultVal int32
+	}{
+		{"severity", &conf.SeverityField, (*message.Message).GetSeverity, message.Default_Message_Severity},
+		{"pid", &conf.PIDField, (*message.Message).GetPid, 0},
+	} {
+		*f.field = f.name
+		dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &conf)
+
+		cases := []struct {
+			in         string
+			wantVal    int32
+			wantFields fields
+		}{
+			{`{"NotField": 1234}`, f.defaultVal, fields{newField("NotField", 1234.0, "")}},
+			{fmt.Sprintf(`{"%s": 1234}`, f.name), 1234, nil},
+			{fmt.Sprintf(`{"%s": "foo"}`, f.name), f.defaultVal, nil},
+		}
+
+		for _, c := range cases {
+			dt.testDecode(c.in, c.wantFields)
+			Expect(f.getField(dt.pack.Message)).To(Equal(c.wantVal))
+		}
+
+		*f.field = ""
+	}
+}

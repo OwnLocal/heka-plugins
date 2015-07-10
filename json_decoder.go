@@ -28,6 +28,8 @@ type JSONDecoderConfig struct {
 	LoggerField     string `toml:"logger_field"`
 	EnvVersionField string `toml:"env_version_field"`
 	HostnameField   string `toml:"hostname_field"`
+	SeverityField   string `toml:"severity_field"`
+	PIDField        string `toml:"pid_field"`
 	fieldMap        map[string]fieldDecoder
 }
 
@@ -83,7 +85,6 @@ func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) (err err
 			}
 			continue
 		}
-
 		msg.AddField(field)
 	}
 	return
@@ -101,6 +102,8 @@ func (conf *JSONDecoderConfig) buildFieldMap() {
 		{conf.LoggerField, conf.decodeStringField((*message.Message).SetLogger)},
 		{conf.EnvVersionField, conf.decodeStringField((*message.Message).SetEnvVersion)},
 		{conf.HostnameField, conf.decodeStringField((*message.Message).SetHostname)},
+		{conf.SeverityField, conf.decodeIntField((*message.Message).SetSeverity)},
+		{conf.PIDField, conf.decodeIntField((*message.Message).SetPid)},
 	} {
 		if f.name != "" {
 			conf.fieldMap[f.name] = f.fn
@@ -153,7 +156,7 @@ func (conf *JSONDecoderConfig) decodeUUID(msg *message.Message, field *message.F
 
 func (conf *JSONDecoderConfig) decodeStringField(setter func(*message.Message, string)) fieldDecoder {
 	return func(msg *message.Message, field *message.Field) error {
-		if *(field.ValueType) == message.Field_STRING {
+		if *field.ValueType == message.Field_STRING {
 			v := field.GetValueString()[0]
 			if v != "" {
 				setter(msg, v)
@@ -163,7 +166,18 @@ func (conf *JSONDecoderConfig) decodeStringField(setter func(*message.Message, s
 	}
 }
 
-//TODO: Add config options for which fields to take Uuid, Timestamp, Type, Logger, Severity, EnvVersion, Pid, Hostname? from and also parse those nicely where possible (use ForgivingTimeParse for timestamp)
+func (conf *JSONDecoderConfig) decodeIntField(setter func(*message.Message, int32)) fieldDecoder {
+	return func(msg *message.Message, field *message.Field) error {
+		if *field.ValueType == message.Field_DOUBLE {
+			v := field.GetValueDouble()[0]
+			if v != 0 {
+				setter(msg, int32(v))
+			}
+		}
+		return nil
+	}
+}
+
 //TODO: Add config options for encoder on what fields to take from the Heka Message and what fields to put them in in the outgoing JSON
 //TODO: Write Decoder and/or filter that sets UUID based on Hashing fields and then converting to UUID format, using NewHash from go-uuid: http://godoc.org/code.google.com/p/go-uuid/uuid
 
