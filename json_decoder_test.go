@@ -126,6 +126,30 @@ func TestDecodeBadUUID(t *testing.T) {
 	}
 }
 
+func TestDecodeSeverity(t *testing.T) {
+	cases := []struct {
+		in        interface{}
+		wantLevel int32
+	}{
+		{"emerg", 0}, {"EMERGENCY", 0},
+		{"alert", 1}, {"ALERT", 1}, {"A", 1},
+		{"crit", 2}, {"CRITICAL", 2}, {"C", 2},
+		{"err", 3}, {"ERROR", 3}, {"E", 3},
+		{"warning", 4}, {"WARN", 4}, {"W", 4},
+		{"notice", 5}, {"NOTICE", 5}, {"N", 5},
+		{"info", 6}, {"INFORMATION", 6}, {"I", 6},
+		{"debug", 7}, {"DEBUG", 7}, {"D", 7},
+		{42, 42},
+		{"Not a valid thing", 7},
+	}
+
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{SeverityField: "severity"})
+	for _, c := range cases {
+		dt.testDecode(fmt.Sprintf(`{"severity": %#v}`, c.in), nil)
+		Expect(dt.pack.Message.GetSeverity()).To(Equal(c.wantLevel))
+	}
+}
+
 func TestDecodeStringFields(t *testing.T) {
 	conf := hekalocal.JSONDecoderConfig{}
 
@@ -170,7 +194,6 @@ func TestDecodeIntFields(t *testing.T) {
 		getField   func(*message.Message) int32
 		defaultVal int32
 	}{
-		{"severity", &conf.SeverityField, (*message.Message).GetSeverity, message.Default_Message_Severity},
 		{"pid", &conf.PIDField, (*message.Message).GetPid, 0},
 	} {
 		*f.field = f.name

@@ -3,6 +3,7 @@ package hekalocal
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 	"unicode"
 
@@ -98,11 +99,11 @@ func (conf *JSONDecoderConfig) buildFieldMap() {
 	}{
 		{conf.TimestampField, conf.decodeTimestamp},
 		{conf.UUIDField, conf.decodeUUID},
+		{conf.SeverityField, conf.decodeSeverity},
 		{conf.TypeField, conf.decodeStringField((*message.Message).SetType)},
 		{conf.LoggerField, conf.decodeStringField((*message.Message).SetLogger)},
 		{conf.EnvVersionField, conf.decodeStringField((*message.Message).SetEnvVersion)},
 		{conf.HostnameField, conf.decodeStringField((*message.Message).SetHostname)},
-		{conf.SeverityField, conf.decodeIntField((*message.Message).SetSeverity)},
 		{conf.PIDField, conf.decodeIntField((*message.Message).SetPid)},
 	} {
 		if f.name != "" {
@@ -151,6 +152,36 @@ func (conf *JSONDecoderConfig) decodeUUID(msg *message.Message, field *message.F
 		return fmt.Errorf("Not a valid UUID: %s", field.String())
 	}
 	msg.SetUuid(u)
+	return nil
+}
+
+var severityMap = []struct {
+	name     string
+	severity int32
+}{
+	{"alert", 1},
+	{"crit", 2},
+	{"err", 3},
+	{"warn", 4},
+	{"notice", 5},
+	{"info", 6},
+	{"debug", 7},
+	{"emerg", 0},
+}
+
+func (conf *JSONDecoderConfig) decodeSeverity(msg *message.Message, field *message.Field) error {
+	switch *(field.ValueType) {
+	case message.Field_DOUBLE:
+		msg.SetSeverity(int32(field.GetValueDouble()[0]))
+	case message.Field_STRING:
+		level := strings.ToLower(field.GetValueString()[0])
+		for _, s := range severityMap {
+			if strings.HasPrefix(level, s.name) || strings.HasPrefix(s.name, level) {
+				msg.SetSeverity(s.severity)
+				break
+			}
+		}
+	}
 	return nil
 }
 
