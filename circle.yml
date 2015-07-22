@@ -13,3 +13,4 @@ test:
 
   post:
     - BUILD_TYPE=DEB ./build_heka.sh
+    - aws s3 cp ${CIRCLE_ARTIFACTS}/*.deb s3://ownlocal-debs/heka/
