@@ -12,4 +12,4 @@ test:
     - GOPATH=`pwd`/.goat/deps .goat/deps/bin/ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race
 
   post:
-    - ./build_heka.sh
+    - BUILD_TYPE=DEB ./build_heka.sh
