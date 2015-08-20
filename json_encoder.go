@@ -8,7 +8,18 @@ import (
 )
 
 // JSONEncoder serializes messages to JSON.
-type JSONEncoder struct{}
+type JSONEncoder struct {
+	config *JSONEncoderConfig
+}
+type JSONEncoderConfig struct {
+	TimestampField string `toml:"timestamp_field"`
+}
+
+// Init is provided to make JSONEncoder implement the Heka pipeline.Plugin interface.
+func (enc *JSONEncoder) Init(config interface{}) (err error) {
+	enc.config = config.(*JSONEncoderConfig)
+	return
+}
 
 // Encode is implemented to make JSONEncoder implement the pipeline.Encoder interface.
 func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err error) {
