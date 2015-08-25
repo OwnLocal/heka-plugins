@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"code.google.com/p/go-uuid/uuid"
+
 	"github.com/mozilla-services/heka/message"
 	"github.com/mozilla-services/heka/pipeline"
 )
@@ -15,6 +17,7 @@ type JSONEncoder struct {
 
 type JSONEncoderConfig struct {
 	TimestampField string `toml:"timestamp_field"`
+	UUIDField      string `toml:"uuid_field"`
 }
 
 // Init is provided to make JSONEncoder implement the Heka pipeline.Plugin interface.
@@ -33,8 +36,13 @@ func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err 
 			rawMap[field.GetName()] = field.GetValue()
 		}
 	}
+
 	if enc.config.TimestampField != "" && pack.Message.Timestamp != nil {
 		rawMap[enc.config.TimestampField] = time.Unix(0, *pack.Message.Timestamp).UTC()
+	}
+
+	if enc.config.UUIDField != "" && pack.Message.Uuid != nil {
+		rawMap[enc.config.UUIDField] = uuid.UUID(pack.Message.Uuid).String()
 	}
 	output, err = json.Marshal(rawMap)
 	return

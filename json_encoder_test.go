@@ -4,14 +4,13 @@ import (
 	"testing"
 	"time"
 
+	"code.google.com/p/go-uuid/uuid"
+
 	"github.com/OwnLocal/heka-plugins"
 	"github.com/mozilla-services/heka/message"
-	. "github.com/onsi/gomega"
 )
 
 func TestEncode(t *testing.T) {
-	RegisterTestingT(t)
-
 	cases := []struct {
 		in   fields
 		want string
@@ -71,5 +70,20 @@ func TestEncodeTimestamp(t *testing.T) {
 	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, &hekalocal.JSONEncoderConfig{TimestampField: "@timestamp"})
 	for _, c := range cases {
 		et.testEncode(&message.Message{Timestamp: c.in}, c.wantJSON)
+	}
+}
+
+func TestEncodeUUID(t *testing.T) {
+	cases := []struct {
+		in       uuid.UUID
+		wantJSON string
+	}{
+		{uuid.Parse("da8f5b03-5ece-4e45-aad2-0bfa9b99f921"), `{"@uuid": "da8f5b03-5ece-4e45-aad2-0bfa9b99f921"}`},
+		{nil, `{}`},
+	}
+
+	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, &hekalocal.JSONEncoderConfig{UUIDField: "@uuid"})
+	for _, c := range cases {
+		et.testEncode(&message.Message{Uuid: c.in}, c.wantJSON)
 	}
 }
