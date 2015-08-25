@@ -13,4 +13,4 @@ test:
 
   post:
     - BUILD_TYPE=DEB ./build_heka.sh
-    - DEST=`basename ${CIRCLE_ARTIFACTS}/*.deb`; aws put ownlocal-debs/heka/${DEST} ${CIRCLE_ARTIFACTS}/*.deb
+    - DEST=`basename ${CIRCLE_ARTIFACTS}/*.deb`; aws s3 cp ${CIRCLE_ARTIFACTS}/*.deb s3://ownlocal-debs/heka/${DEST}
