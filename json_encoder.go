@@ -2,6 +2,7 @@ package hekalocal
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/mozilla-services/heka/message"
 	"github.com/mozilla-services/heka/pipeline"
@@ -11,6 +12,7 @@ import (
 type JSONEncoder struct {
 	config *JSONEncoderConfig
 }
+
 type JSONEncoderConfig struct {
 	TimestampField string `toml:"timestamp_field"`
 }
@@ -30,6 +32,9 @@ func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err 
 		} else {
 			rawMap[field.GetName()] = field.GetValue()
 		}
+	}
+	if enc.config.TimestampField != "" && pack.Message.Timestamp != nil {
+		rawMap[enc.config.TimestampField] = time.Unix(0, *pack.Message.Timestamp).UTC()
 	}
 	output, err = json.Marshal(rawMap)
 	return

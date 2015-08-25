@@ -76,3 +76,31 @@ func (dt *decoderTester) testDecodeError(payload string) error {
 	gomega.Expect(packs[0].Message.Fields).To(gomega.BeEmpty())
 	return err
 }
+
+type encoderTester struct {
+	t       *testing.T
+	encoder pipeline.Encoder
+}
+
+func newEncoderTester(t *testing.T, encoder pipeline.Encoder, encoderConfig interface{}) *encoderTester {
+	gomega.RegisterTestingT(t)
+	et := &encoderTester{
+		t:       t,
+		encoder: encoder,
+	}
+	encoder.(pipeline.Plugin).Init(encoderConfig)
+
+	return et
+}
+
+func (et *encoderTester) testEncode(msg *message.Message, expectedJSON string) {
+	// Set up the pack and run the decoder.
+	pack := &pipeline.PipelinePack{Message: msg}
+	encoded, err := et.encoder.Encode(pack)
+
+	if err != nil {
+		et.t.Error(err)
+	}
+
+	gomega.Expect(encoded).To(gomega.MatchJSON(expectedJSON))
+}

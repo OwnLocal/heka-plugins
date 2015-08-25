@@ -6,7 +6,6 @@ import (
 
 	"github.com/OwnLocal/heka-plugins"
 	"github.com/mozilla-services/heka/message"
-	"github.com/mozilla-services/heka/pipeline"
 	. "github.com/onsi/gomega"
 )
 
@@ -50,39 +49,27 @@ func TestEncode(t *testing.T) {
 		},
 	}
 
-	encoder := hekalocal.JSONEncoder{}
-	pack := &pipeline.PipelinePack{}
-
+	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, &hekalocal.JSONEncoderConfig{})
 	for _, c := range cases {
-		pack.Message = &message.Message{Fields: c.in}
-		out, err := encoder.Encode(pack)
-		if err != nil {
-			t.Error(err)
-		}
-
-		Expect(out).To(MatchJSON(c.want))
+		et.testEncode(&message.Message{Fields: c.in}, c.want)
 	}
 }
 
-func TestEncodeTimestamp(t *testing.T) {
-	RegisterTestingT(t)
+func intPtr(i int64) *int64 {
+	return &i
+}
 
+func TestEncodeTimestamp(t *testing.T) {
 	cases := []struct {
-		in       int64
+		in       *int64
 		wantJSON string
 	}{
-		{time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano(), `{"@timestamp": "2015-10-10T10:10:10Z"}`},
+		{intPtr(time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano()), `{"@timestamp": "2015-10-10T10:10:10Z"}`},
+		{nil, `{}`},
 	}
 
+	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, &hekalocal.JSONEncoderConfig{TimestampField: "@timestamp"})
 	for _, c := range cases {
-		enc := hekalocal.JSONEncoder{}
-		conf := &hekalocal.JSONEncoderConfig{TimestampField: "@timestamp"}
-		enc.Init(conf)
-		pack := &pipeline.PipelinePack{}
-		pack.Message = &message.Message{Timestamp: &c.in}
-
-		out, err := enc.Encode(pack)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(out)).To(MatchJSON(c.wantJSON))
+		et.testEncode(&message.Message{Timestamp: c.in}, c.wantJSON)
 	}
 }
