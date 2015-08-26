@@ -217,3 +217,25 @@ func TestDecodeIntFields(t *testing.T) {
 		*f.field = ""
 	}
 }
+
+func TestHashUUID(t *testing.T) {
+	cases := []struct {
+		in         string
+		wantUUID   string
+		wantFields fields
+	}{
+		{`{"timestamp": "2015-10-10T10:10:10Z"}`, "16bc6d00-6f37-11e5-804b-7f8b32bc10ae", nil},
+		{`{"timestamp": "2015-10-10T10:10:10Z", "other": "stuff", "here": "too"}`, "16bc6d00-6f37-11e5-800b-7b8f4ee621ac", fields{newField("other", "stuff", ""), newField("here", "too", "")}},
+	}
+
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{
+		UUIDField:      "uuid",
+		HashUUID:       true,
+		TimestampField: "timestamp",
+	})
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+		Expect(dt.pack.Message.GetUuidString()).To(Equal(c.wantUUID))
+	}
+}

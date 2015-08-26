@@ -17,6 +17,7 @@ type JSONEncoder struct {
 
 type fieldEncoder func(map[string]interface{}, *message.Message)
 
+// JSONEncoderConfig contains the optional field names to put Message fields into.
 type JSONEncoderConfig struct {
 	TimestampField  string `toml:"timestamp_field"`
 	UUIDField       string `toml:"uuid_field"`

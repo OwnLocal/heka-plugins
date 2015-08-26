@@ -1,6 +1,7 @@
 package hekalocal
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -31,7 +32,11 @@ type JSONDecoderConfig struct {
 	HostnameField   string `toml:"hostname_field"`
 	SeverityField   string `toml:"severity_field"`
 	PIDField        string `toml:"pid_field"`
-	fieldMap        map[string]fieldDecoder
+
+	// The message payload will be hashed and made into a UUID along with the timestamp.
+	HashUUID bool `toml:"hash_uuid"`
+
+	fieldMap map[string]fieldDecoder
 }
 
 // Init is provided to make JSONDecoder implement the Heka pipeline.Plugin interface.
@@ -49,7 +54,12 @@ func (jd *JSONDecoder) ConfigStruct() interface{} {
 // Decode is provided to make JSONDecoder implement the Heka pipeline.Decoder interface.
 func (jd *JSONDecoder) Decode(pack *pipeline.PipelinePack) (packs []*pipeline.PipelinePack, err error) {
 	packs = []*pipeline.PipelinePack{pack}
-	err = jd.decodeJSON(pack.Message.GetPayload(), pack.Message)
+	payload := pack.Message.GetPayload()
+	err = jd.decodeJSON(payload, pack.Message)
+	if jd.config.HashUUID {
+		hash := md5.Sum([]byte(payload))
+		pack.Message.SetUuid([]byte(NewTimestampUUID(pack.Message.GetTimestamp(), hash[0:])))
+	}
 	return
 }
 
@@ -209,7 +219,6 @@ func (conf *JSONDecoderConfig) decodeIntField(setter func(*message.Message, int3
 	}
 }
 
-//TODO: Add config options for encoder on what fields to take from the Heka Message and what fields to put them in in the outgoing JSON
 //TODO: Write Decoder and/or filter that sets UUID based on Hashing fields and then converting to UUID format, using NewHash from go-uuid: http://godoc.org/code.google.com/p/go-uuid/uuid
 
 func init() {
