@@ -1,6 +1,7 @@
 package hekalocal_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -109,4 +110,51 @@ func TestEncodeSeverity(t *testing.T) {
 func TestEncodeSeverityDefault(t *testing.T) {
 	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, &hekalocal.JSONEncoderConfig{SeverityField: "severity"})
 	et.testEncode(&message.Message{}, `{"severity": 7}`)
+}
+
+func TestEncodeStringFields(t *testing.T) {
+	conf := hekalocal.JSONEncoderConfig{}
+
+	for _, f := range []struct {
+		name     string
+		field    *string
+		setField func(*message.Message, string)
+	}{
+		{"type", &conf.TypeField, (*message.Message).SetType},
+		{"logger", &conf.LoggerField, (*message.Message).SetLogger},
+		{"env_version", &conf.EnvVersionField, (*message.Message).SetEnvVersion},
+		{"hostname", &conf.HostnameField, (*message.Message).SetHostname},
+	} {
+		*f.field = f.name
+		et := newEncoderTester(t, &hekalocal.JSONEncoder{}, &conf)
+
+		msg := &message.Message{}
+		f.setField(msg, "string value!")
+		et.testEncode(msg, fmt.Sprintf(`{"%s": "string value!"}`, f.name))
+
+		*f.field = ""
+	}
+}
+
+func int32Ptr(i int32) *int32 {
+	return &i
+}
+
+func TestEncodePID(t *testing.T) {
+	cases := []struct {
+		in       *int32
+		wantJSON string
+	}{
+		{int32Ptr(0), `{"pid": 0}`},
+		{int32Ptr(1), `{"pid": 1}`},
+		{int32Ptr(2), `{"pid": 2}`},
+		{int32Ptr(7), `{"pid": 7}`},
+		{int32Ptr(53), `{"pid": 53}`},
+		{nil, `{}`},
+	}
+
+	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, &hekalocal.JSONEncoderConfig{PIDField: "pid"})
+	for _, c := range cases {
+		et.testEncode(&message.Message{Pid: c.in}, c.wantJSON)
+	}
 }
