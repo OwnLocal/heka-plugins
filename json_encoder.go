@@ -18,6 +18,7 @@ type JSONEncoder struct {
 type JSONEncoderConfig struct {
 	TimestampField string `toml:"timestamp_field"`
 	UUIDField      string `toml:"uuid_field"`
+	SeverityField  string `toml:"severity_field"`
 }
 
 // Init is provided to make JSONEncoder implement the Heka pipeline.Plugin interface.
@@ -43,6 +44,10 @@ func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err 
 
 	if enc.config.UUIDField != "" && pack.Message.Uuid != nil {
 		rawMap[enc.config.UUIDField] = uuid.UUID(pack.Message.Uuid).String()
+	}
+
+	if enc.config.SeverityField != "" {
+		rawMap[enc.config.SeverityField] = pack.Message.GetSeverity()
 	}
 	output, err = json.Marshal(rawMap)
 	return

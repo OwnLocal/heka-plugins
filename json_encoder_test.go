@@ -87,3 +87,26 @@ func TestEncodeUUID(t *testing.T) {
 		et.testEncode(&message.Message{Uuid: c.in}, c.wantJSON)
 	}
 }
+
+func TestEncodeSeverity(t *testing.T) {
+	cases := []struct {
+		in       int32
+		wantJSON string
+	}{
+		{0, `{"severity": 0}`},
+		{1, `{"severity": 1}`},
+		{2, `{"severity": 2}`},
+		{7, `{"severity": 7}`},
+		{53, `{"severity": 53}`},
+	}
+
+	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, &hekalocal.JSONEncoderConfig{SeverityField: "severity"})
+	for _, c := range cases {
+		et.testEncode(&message.Message{Severity: &c.in}, c.wantJSON)
+	}
+}
+
+func TestEncodeSeverityDefault(t *testing.T) {
+	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, &hekalocal.JSONEncoderConfig{SeverityField: "severity"})
+	et.testEncode(&message.Message{}, `{"severity": 7}`)
+}
