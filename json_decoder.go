@@ -219,8 +219,6 @@ func (conf *JSONDecoderConfig) decodeIntField(setter func(*message.Message, int3
 	}
 }
 
-//TODO: Write Decoder and/or filter that sets UUID based on Hashing fields and then converting to UUID format, using NewHash from go-uuid: http://godoc.org/code.google.com/p/go-uuid/uuid
-
 func init() {
 	pipeline.RegisterPlugin("JSONDecoder", func() interface{} { return new(JSONDecoder) })
 }
