@@ -1,6 +1,7 @@
 package hekalocal_test
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/OwnLocal/heka-plugins"
 	"github.com/mozilla-services/heka/message"
+	"github.com/onsi/gomega"
 )
 
 func TestEncode(t *testing.T) {
@@ -157,4 +159,27 @@ func TestEncodePID(t *testing.T) {
 	for _, c := range cases {
 		et.testEncode(&message.Message{Pid: c.in}, c.wantJSON)
 	}
+}
+
+func TestAddBulkHeader(t *testing.T) {
+	conf := &hekalocal.JSONEncoderConfig{
+		ElasticsearchBulk:  true,
+		ElasticsearchIndex: "heka-%{2006.01}",
+		ElasticsearchType:  "%{Type}",
+		ElasticsearchID:    "%{UUID}",
+	}
+	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, conf)
+	msg := &message.Message{}
+	msg.SetType("test_log")
+	msg.SetTimestamp(time.Date(2015, 10, 10, 10, 10, 10, 0, time.UTC).UnixNano())
+	msg.SetUuid(uuid.Parse("de305d54-75b4-431b-adb2-eb6b9e546014"))
+	message.NewStringField(msg, "foo", "bar")
+
+	encoded, err := et.doEncode(msg)
+	if err != nil {
+		et.t.Error(err)
+	}
+	parts := bytes.Split(encoded, []byte("\n"))
+	gomega.Expect(parts[0]).To(gomega.MatchJSON(`{"index": {"_index": "heka-2015.10", "_type": "test_log", "_id":"de305d54-75b4-431b-adb2-eb6b9e546014"}}`))
+	gomega.Expect(parts[1]).To(gomega.MatchJSON(`{"foo": "bar"}`))
 }

@@ -1,6 +1,7 @@
 package hekalocal
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 
@@ -8,11 +9,13 @@ import (
 
 	"github.com/mozilla-services/heka/message"
 	"github.com/mozilla-services/heka/pipeline"
+	"github.com/mozilla-services/heka/plugins/elasticsearch"
 )
 
 // JSONEncoder serializes messages to JSON.
 type JSONEncoder struct {
 	config *JSONEncoderConfig
+	coord  *elasticsearch.ElasticSearchCoordinates
 }
 
 type fieldEncoder func(map[string]interface{}, *message.Message)
@@ -27,13 +30,34 @@ type JSONEncoderConfig struct {
 	EnvVersionField string `toml:"env_version_field"`
 	HostnameField   string `toml:"hostname_field"`
 	PIDField        string `toml:"pid_field"`
-	fieldMap        map[string]fieldEncoder
+
+	ElasticsearchBulk  bool   `toml:"elasticsearch_bulk"`
+	ElasticsearchIndex string `toml:"elasticsearch_index"`
+	ElasticsearchType  string `toml:"elasticsearch_type"`
+	ElasticsearchID    string `toml:"elasticsearch_id"`
+
+	fieldMap map[string]fieldEncoder
+}
+
+// ConfigStruct is provided to make JSONEncoder implement the Heka pipeline.HasConfigStruct interface.
+func (enc *JSONEncoder) ConfigStruct() interface{} {
+	return &JSONEncoderConfig{
+		ElasticsearchIndex: "heka-%{2006.01.02}",
+		ElasticsearchType:  "%{Type}",
+		ElasticsearchID:    "%{UUID}",
+	}
 }
 
 // Init is provided to make JSONEncoder implement the Heka pipeline.Plugin interface.
 func (enc *JSONEncoder) Init(config interface{}) (err error) {
 	enc.config = config.(*JSONEncoderConfig)
 	enc.config.buildFieldMap()
+	enc.coord = &elasticsearch.ElasticSearchCoordinates{
+		Index:                enc.config.ElasticsearchIndex,
+		Type:                 enc.config.ElasticsearchType,
+		Id:                   enc.config.ElasticsearchID,
+		ESIndexFromTimestamp: true,
+	}
 	return
 }
 
@@ -48,11 +72,19 @@ func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err 
 		}
 	}
 
-	for _, decodeFn := range enc.config.fieldMap {
-		decodeFn(rawMap, pack.Message)
+	for _, encodeFn := range enc.config.fieldMap {
+		encodeFn(rawMap, pack.Message)
 	}
 
-	output, err = json.Marshal(rawMap)
+	buf := &bytes.Buffer{}
+	if enc.config.ElasticsearchBulk {
+		enc.coord.PopulateBuffer(pack.Message, buf)
+		buf.WriteString("\n")
+	}
+
+	jsonEnc := json.NewEncoder(buf)
+	err = jsonEnc.Encode(rawMap)
+	output = buf.Bytes()
 	return
 }
 

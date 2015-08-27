@@ -93,10 +93,14 @@ func newEncoderTester(t *testing.T, encoder pipeline.Encoder, encoderConfig inte
 	return et
 }
 
-func (et *encoderTester) testEncode(msg *message.Message, expectedJSON string) {
-	// Set up the pack and run the decoder.
+func (et *encoderTester) doEncode(msg *message.Message) ([]byte, error) {
+	// Set up the pack and run the encoder.
 	pack := &pipeline.PipelinePack{Message: msg}
-	encoded, err := et.encoder.Encode(pack)
+	return et.encoder.Encode(pack)
+}
+
+func (et *encoderTester) testEncode(msg *message.Message, expectedJSON string) {
+	encoded, err := et.doEncode(msg)
 
 	if err != nil {
 		et.t.Error(err)
