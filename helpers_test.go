@@ -7,6 +7,7 @@ import (
 	"github.com/mozilla-services/heka/message"
 	"github.com/mozilla-services/heka/pipeline"
 	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 )
 
 func newField(name string, value interface{}, representation string) *message.Field {
@@ -67,13 +68,21 @@ func (dt *decoderTester) testDecode(payload string, expectedFields fields) []*pi
 	return packs
 }
 
-func (dt *decoderTester) testDecodeError(payload string) error {
+func (dt *decoderTester) testDecodeError(payload string, errorMatcher types.GomegaMatcher) error {
 	// Set up the pack and run the decoder.
 	dt.pack = &pipeline.PipelinePack{}
 	dt.pack.Message = &message.Message{Payload: &payload}
 	packs, err := dt.decoder.Decode(dt.pack)
 
-	gomega.Expect(packs[0].Message.Fields).To(gomega.BeEmpty())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	val, ok := packs[0].Message.GetFieldValue("decode_error")
+	gomega.Expect(ok).To(gomega.BeTrue())
+	gomega.Expect(val).To(errorMatcher)
+
+	val, ok = packs[0].Message.GetFieldValue("payload")
+	gomega.Expect(ok).To(gomega.BeTrue())
+	gomega.Expect(val).To(gomega.Equal(payload))
+
 	return err
 }
 

@@ -63,10 +63,24 @@ func (jd *JSONDecoder) Decode(pack *pipeline.PipelinePack) (packs []*pipeline.Pi
 	return
 }
 
-func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) (err error) {
+func addDecodeError(msg *message.Message, jsonErr error) (err error) {
+	var field *message.Field
+	if field, err = message.NewField("decode_error", jsonErr.Error(), ""); err != nil {
+		return err
+	}
+	msg.AddField(field)
+	if field, err = message.NewField("payload", msg.GetPayload(), ""); err != nil {
+		return err
+	}
+	msg.AddField(field)
+	return nil
+}
+
+func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) error {
+	var err error
 	rawMap := make(map[string]json.RawMessage)
-	if err = json.Unmarshal([]byte(jsonStr), &rawMap); err != nil {
-		return
+	if err := json.Unmarshal([]byte(jsonStr), &rawMap); err != nil {
+		return addDecodeError(msg, err)
 	}
 
 	for key, raw := range rawMap {
@@ -78,7 +92,7 @@ func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) (err err
 		if unicode.IsDigit(rb) || rb == '-' || rb == '"' || rawS == "true" || rawS == "false" {
 			var val interface{}
 			if err = json.Unmarshal(raw, &val); err != nil {
-				return
+				return addDecodeError(msg, err)
 			}
 			field, err = message.NewField(key, val, "")
 		} else {
@@ -86,19 +100,19 @@ func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) (err err
 			field, err = message.NewField(key, []byte(raw), "json")
 		}
 		if err != nil {
-			return
+			return err
 		}
 
 		if fieldFn, ok := jd.config.fieldMap[key]; ok {
 			err = fieldFn(msg, field)
 			if err != nil {
-				return
+				return err
 			}
 			continue
 		}
 		msg.AddField(field)
 	}
-	return
+	return nil
 }
 
 func (conf *JSONDecoderConfig) buildFieldMap() {
@@ -145,7 +159,7 @@ func (conf *JSONDecoderConfig) decodeTimestamp(msg *message.Message, field *mess
 	}
 
 	if err != nil {
-		return err
+		return addDecodeError(msg, fmt.Errorf("Invalid timestamp: %s", err.Error()))
 	}
 	msg.SetTimestamp(timestamp.UnixNano())
 	return nil
@@ -159,7 +173,7 @@ func (conf *JSONDecoderConfig) decodeUUID(msg *message.Message, field *message.F
 	}
 
 	if u == nil {
-		return fmt.Errorf("Not a valid UUID: %s", field.String())
+		return addDecodeError(msg, fmt.Errorf("Not a valid UUID: %s", field.String()))
 	}
 	msg.SetUuid(u)
 	return nil

@@ -46,6 +46,7 @@ func TestDecode(t *testing.T) {
                 }`), "json"),
 			},
 		},
+		{`This isn't valid JSON`, fields{newField("decode_error", "invalid character 'T' looking for beginning of value", ""), newField("payload", "This isn't valid JSON", "")}},
 	}
 
 	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{})
@@ -89,7 +90,7 @@ func TestDecodeBadTimestamp(t *testing.T) {
 	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{TimestampField: "@timestamp"})
 
 	for _, c := range cases {
-		Expect(dt.testDecodeError(fmt.Sprintf(`{"@timestamp": %#v}`, c))).To(HaveOccurred())
+		dt.testDecodeError(fmt.Sprintf(`{"@timestamp": %#v}`, c), ContainSubstring("Invalid timestamp: "))
 	}
 }
 
@@ -122,7 +123,7 @@ func TestDecodeBadUUID(t *testing.T) {
 	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{UUIDField: "@uuid"})
 
 	for _, c := range cases {
-		Expect(dt.testDecodeError(c)).To(MatchError(ContainSubstring("Not a valid UUID")))
+		dt.testDecodeError(c, ContainSubstring("Not a valid UUID"))
 	}
 }
 
