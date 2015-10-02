@@ -22,10 +22,10 @@ func TestDecode(t *testing.T) {
 		{`{"f":false}`, fields{newField("f", false, "")}},
 
 		{`{"a":[]}`, fields{newField("a", []byte("[]"), "json")}},
-		{`{"a":[1, 2, 3, 4]}`, fields{newField("a", []byte("[1, 2, 3, 4]"), "json")}},
+		{`{"a":[1, 2, 3, 4]}`, fields{newField("a", []byte("[1,2,3,4]"), "json")}},
 
 		{`{"o":{}}`, fields{newField("o", []byte("{}"), "json")}},
-		{`{"o":{"a":"b", "c": "d"}}`, fields{newField("o", []byte(`{"a":"b", "c": "d"}`), "json")}},
+		{`{"o":{"a":"b", "c": "d"}}`, fields{newField("o", []byte(`{"a":"b","c":"d"}`), "json")}},
 
 		{`{
             "s": "foo",
@@ -40,10 +40,10 @@ func TestDecode(t *testing.T) {
 				newField("s", "foo", ""),
 				newField("n", 42.0, ""),
 				newField("b", false, ""),
-				newField("o", []byte(`{
+				newField("o", compactJSON([]byte(`{
                   "a": "b",
                   "c": "d"
-                }`), "json"),
+                }`)), "json"),
 			},
 		},
 		{`This isn't valid JSON`, fields{newField("decode_error", "invalid character 'T' looking for beginning of value", ""), newField("payload", "This isn't valid JSON", "")}},
@@ -238,5 +238,48 @@ func TestHashUUID(t *testing.T) {
 	for _, c := range cases {
 		dt.testDecode(c.in, c.wantFields)
 		Expect(dt.pack.Message.GetUuidString()).To(Equal(c.wantUUID))
+	}
+}
+
+func TestDecodeFlatten(t *testing.T) {
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{
+		Flatten: true,
+	})
+
+	cases := []struct {
+		in         string
+		wantFields fields
+	}{
+		{`{}`, nil},
+		{`{"foo": "bar"}`, fields{newField("foo", "bar", "")}},
+		{`{"foo": {"bar": "baz"}}`, fields{newField("foo.bar", "baz", "")}},
+		{`{"foo": {"bar": {"baz": [1,2,3,4]}}}`, fields{newField("foo.bar.baz", []byte("[1,2,3,4]"), "json")}},
+		{`{"foo": {"bar": {"baz": 2, "blar": "yup"}}}`, fields{newField("foo.bar.baz", 2.0, ""), newField("foo.bar.blar", "yup", "")}},
+	}
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+	}
+}
+
+func TestDecodeFlattenToStrings(t *testing.T) {
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{
+		Flatten:          true,
+		FlattenToStrings: true,
+	})
+
+	cases := []struct {
+		in         string
+		wantFields fields
+	}{
+		{`{}`, nil},
+		{`{"foo": "bar"}`, fields{newField("foo", "bar", "")}},
+		{`{"foo": {"bar": "baz"}}`, fields{newField("foo.bar", "baz", "")}},
+		{`{"foo": {"bar": {"baz": [1,2,3,4]}}}`, fields{newField("foo.bar.baz", []byte(`["1","2","3","4"]`), "json")}},
+		{`{"foo": {"bar": {"baz": 2, "blar": "yup"}}}`, fields{newField("foo.bar.baz", "2", ""), newField("foo.bar.blar", "yup", "")}},
+	}
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
 	}
 }

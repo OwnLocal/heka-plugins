@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode"
 
 	"code.google.com/p/go-uuid/uuid"
 
@@ -24,14 +23,16 @@ type fieldDecoder func(*message.Message, *message.Field) error
 
 // JSONDecoderConfig contains the optional field names from which to extract message fields.
 type JSONDecoderConfig struct {
-	TimestampField  string `toml:"timestamp_field"`
-	UUIDField       string `toml:"uuid_field"`
-	TypeField       string `toml:"type_field"`
-	LoggerField     string `toml:"logger_field"`
-	EnvVersionField string `toml:"env_version_field"`
-	HostnameField   string `toml:"hostname_field"`
-	SeverityField   string `toml:"severity_field"`
-	PIDField        string `toml:"pid_field"`
+	TimestampField   string `toml:"timestamp_field"`
+	UUIDField        string `toml:"uuid_field"`
+	TypeField        string `toml:"type_field"`
+	LoggerField      string `toml:"logger_field"`
+	EnvVersionField  string `toml:"env_version_field"`
+	HostnameField    string `toml:"hostname_field"`
+	SeverityField    string `toml:"severity_field"`
+	PIDField         string `toml:"pid_field"`
+	Flatten          bool   `toml:"flatten"`
+	FlattenToStrings bool   `toml:"flatten_to_strings"`
 
 	// The message payload will be hashed and made into a UUID along with the timestamp.
 	HashUUID bool `toml:"hash_uuid"`
@@ -78,27 +79,28 @@ func addDecodeError(msg *message.Message, jsonErr error) (err error) {
 
 func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) error {
 	var err error
-	rawMap := make(map[string]json.RawMessage)
+	rawMap := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(jsonStr), &rawMap); err != nil {
 		return addDecodeError(msg, err)
 	}
 
-	for key, raw := range rawMap {
-		var field *message.Field
-		rawS := string(raw)
-		rb := rune(rawS[0])
+	if jd.config.Flatten {
+		rawMap = jd.flattenJSON(rawMap)
+	}
 
-		// If it's a number, string, or bool, decode it.
-		if unicode.IsDigit(rb) || rb == '-' || rb == '"' || rawS == "true" || rawS == "false" {
-			var val interface{}
-			if err = json.Unmarshal(raw, &val); err != nil {
-				return addDecodeError(msg, err)
-			}
+	for key, val := range rawMap {
+		var field *message.Field
+		switch val.(type) {
+		case nil:
+			// message.NewField crashes if you give it a nil value.
+			field, err = message.NewField(key, []byte("null"), "json")
+		case map[string]interface{}, []interface{}:
+			enc, _ := json.Marshal(val)
+			field, err = message.NewField(key, enc, "json")
+		default:
 			field, err = message.NewField(key, val, "")
-		} else {
-			// If it's an object, array, or null, leave it as encoded JSON.
-			field, err = message.NewField(key, []byte(raw), "json")
 		}
+
 		if err != nil {
 			return err
 		}
@@ -113,6 +115,48 @@ func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) error {
 		msg.AddField(field)
 	}
 	return nil
+}
+
+func (jd *JSONDecoder) flattenJSON(j map[string]interface{}) map[string]interface{} {
+	flat := make(map[string]interface{}, len(j))
+	jd.doFlattenJSON(j, flat, "")
+	return flat
+}
+
+func (jd *JSONDecoder) doFlattenJSON(j, flat map[string]interface{}, prefix string) {
+	for key, val := range j {
+		pkey := prefix + key
+		switch t := val.(type) {
+		case []interface{}:
+			if jd.config.FlattenToStrings {
+				val = iSliceToStrings(t)
+			}
+		case map[string]interface{}:
+			jd.doFlattenJSON(t, flat, pkey+".")
+			continue
+		default:
+			if jd.config.FlattenToStrings {
+				val = iToString(val)
+			}
+		}
+		flat[pkey] = val
+	}
+}
+
+func iSliceToStrings(s []interface{}) []interface{} {
+	ss := make([]interface{}, 0, len(s))
+	for _, val := range s {
+		ss = append(ss, iToString(val))
+	}
+	return ss
+}
+
+func iToString(val interface{}) string {
+	if str, ok := val.(string); ok {
+		return str
+	}
+	enc, _ := json.Marshal(val)
+	return string(enc)
 }
 
 func (conf *JSONDecoderConfig) buildFieldMap() {

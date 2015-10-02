@@ -1,6 +1,8 @@
 package hekalocal_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"sort"
 	"testing"
 
@@ -116,4 +118,12 @@ func (et *encoderTester) testEncode(msg *message.Message, expectedJSON string) {
 	}
 
 	gomega.Expect(encoded).To(gomega.MatchJSON(expectedJSON))
+}
+
+func compactJSON(src []byte) []byte {
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, src); err != nil {
+		panic("Failed compacting JSON")
+	}
+	return buf.Bytes()
 }
