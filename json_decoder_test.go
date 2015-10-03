@@ -283,3 +283,75 @@ func TestDecodeFlattenToStrings(t *testing.T) {
 		dt.testDecode(c.in, c.wantFields)
 	}
 }
+
+func TestDecodeFlattenPrefix(t *testing.T) {
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{
+		Flatten:       true,
+		FlattenPrefix: "zzz",
+	})
+
+	cases := []struct {
+		in         string
+		wantFields fields
+	}{
+		{`{}`, nil},
+		{`{"foo": "bar"}`, fields{newField("zzz", []byte(`{"foo":"bar"}`), "json")}},
+		{`{"foo": {"bar": "baz"}}`, fields{newField("zzz", []byte(`{"foo.bar":"baz"}`), "json")}},
+		{`{"foo": {"bar": {"baz": [1,2,3,4]}}}`, fields{newField("zzz", []byte(`{"foo.bar.baz":[1,2,3,4]}`), "json")}},
+		{`{"foo": {"bar": {"baz": 2, "blar": "yup"}}}`, fields{newField("zzz", []byte(`{"foo.bar.baz":2,"foo.bar.blar":"yup"}`), "json")}},
+	}
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+	}
+}
+
+func TestDecodeFlattenPrefixToStrings(t *testing.T) {
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{
+		Flatten:          true,
+		FlattenPrefix:    "zzz",
+		FlattenToStrings: true,
+	})
+
+	cases := []struct {
+		in         string
+		wantFields fields
+	}{
+		{`{}`, nil},
+		{`{"foo": "bar"}`, fields{newField("zzz", []byte(`{"foo":"bar"}`), "json")}},
+		{`{"foo": {"bar": "baz"}}`, fields{newField("zzz", []byte(`{"foo.bar":"baz"}`), "json")}},
+		{`{"foo": {"bar": {"baz": [1,2,3,4]}}}`, fields{newField("zzz", []byte(`{"foo.bar.baz":["1","2","3","4"]}`), "json")}},
+		{`{"foo": {"bar": {"baz": 2, "blar": "yup"}}}`, fields{newField("zzz", []byte(`{"foo.bar.baz":"2","foo.bar.blar":"yup"}`), "json")}},
+	}
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+	}
+}
+
+func TestMoveFields(t *testing.T) {
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{
+		MoveFields: map[string]string{
+			"foo.bar":      "bar.baz",
+			"foo.baz.blar": "whee",
+		},
+	})
+
+	cases := []struct {
+		in         string
+		wantFields fields
+	}{
+		{`{}`, nil},
+		{`{"foo": "bar"}`, fields{newField("foo", "bar", "")}},
+		{`{"foo": {"bar": "baz"}}`, fields{newField("bar", []byte(`{"baz":"baz"}`), "json")}},
+		{`{"foo": {"bar": {"baz": [1,2,3,4]}}}`, fields{newField("bar", []byte(`{"baz":{"baz":[1,2,3,4]}}`), "json")}},
+		{`{"foo": {"baz": {"baz": 2, "blar": "yup"}}}`, fields{
+			newField("foo", []byte(`{"baz":{"baz":2}}`), "json"),
+			newField("whee", "yup", ""),
+		}},
+	}
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+	}
+}

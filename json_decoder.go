@@ -23,16 +23,18 @@ type fieldDecoder func(*message.Message, *message.Field) error
 
 // JSONDecoderConfig contains the optional field names from which to extract message fields.
 type JSONDecoderConfig struct {
-	TimestampField   string `toml:"timestamp_field"`
-	UUIDField        string `toml:"uuid_field"`
-	TypeField        string `toml:"type_field"`
-	LoggerField      string `toml:"logger_field"`
-	EnvVersionField  string `toml:"env_version_field"`
-	HostnameField    string `toml:"hostname_field"`
-	SeverityField    string `toml:"severity_field"`
-	PIDField         string `toml:"pid_field"`
-	Flatten          bool   `toml:"flatten"`
-	FlattenToStrings bool   `toml:"flatten_to_strings"`
+	TimestampField   string            `toml:"timestamp_field"`
+	UUIDField        string            `toml:"uuid_field"`
+	TypeField        string            `toml:"type_field"`
+	LoggerField      string            `toml:"logger_field"`
+	EnvVersionField  string            `toml:"env_version_field"`
+	HostnameField    string            `toml:"hostname_field"`
+	SeverityField    string            `toml:"severity_field"`
+	PIDField         string            `toml:"pid_field"`
+	Flatten          bool              `toml:"flatten"`
+	FlattenPrefix    string            `toml:"flatten_prefix"`
+	FlattenToStrings bool              `toml:"flatten_to_strings"`
+	MoveFields       map[string]string `toml:"move_fields"`
 
 	// The message payload will be hashed and made into a UUID along with the timestamp.
 	HashUUID bool `toml:"hash_uuid"`
@@ -84,8 +86,27 @@ func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) error {
 		return addDecodeError(msg, err)
 	}
 
+	moveMap := make(map[string]interface{}, len(jd.config.MoveFields))
+	for from, to := range jd.config.MoveFields {
+		val, exists := dottedRemove(rawMap, from)
+		if !exists {
+			continue
+		}
+		moveMap[to] = val
+	}
+
 	if jd.config.Flatten {
 		rawMap = jd.flattenJSON(rawMap)
+		if jd.config.FlattenPrefix != "" && len(rawMap) > 0 {
+			rawMap = map[string]interface{}{jd.config.FlattenPrefix: rawMap}
+		}
+	}
+
+	for to, val := range moveMap {
+		err = dottedSet(rawMap, to, val)
+		if err != nil {
+			addDecodeError(msg, err)
+		}
 	}
 
 	for key, val := range rawMap {
@@ -115,6 +136,54 @@ func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) error {
 		msg.AddField(field)
 	}
 	return nil
+}
+
+func dottedSet(m map[string]interface{}, path string, val interface{}) error {
+	keys := strings.Split(path, ".")
+	var key string
+	var ok bool
+	for len(keys) > 1 {
+		key = keys[0]
+		keys = keys[1:]
+		subM, exists := m[key]
+		if !exists {
+			subM = map[string]interface{}{}
+			m[key] = subM
+		}
+		if m, ok = subM.(map[string]interface{}); !ok {
+			return fmt.Errorf("Key does not refer to an object: %s", key)
+		}
+	}
+	m[keys[0]] = val
+	return nil
+}
+
+func dottedRemove(m map[string]interface{}, path string) (interface{}, bool) {
+	keys := strings.SplitN(path, ".", 2)
+	val, exists := m[keys[0]]
+	if !exists {
+		return nil, false
+	}
+
+	// At the last key, remove and return the value.
+	if len(keys) == 1 {
+		delete(m, keys[0])
+		return val, true
+	}
+
+	subTable, ok := val.(map[string]interface{})
+	if !ok {
+		return nil, false
+	}
+
+	val, exists = dottedRemove(subTable, keys[1])
+	if !exists {
+		return nil, false
+	}
+	if len(subTable) == 0 {
+		delete(m, keys[0])
+	}
+	return val, true
 }
 
 func (jd *JSONDecoder) flattenJSON(j map[string]interface{}) map[string]interface{} {
