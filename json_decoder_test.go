@@ -355,3 +355,53 @@ func TestMoveFields(t *testing.T) {
 		dt.testDecode(c.in, c.wantFields)
 	}
 }
+
+func TestKeepFields(t *testing.T) {
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{
+		Flatten:          true,
+		FlattenToStrings: true,
+		KeepFields: []string{
+			"foo.bar",
+			"foo.baz.blar",
+		},
+	})
+	cases := []struct {
+		in         string
+		wantFields fields
+	}{
+		{`{}`, nil},
+		{`{"foo": "bar"}`, fields{newField("foo", "bar", "")}},
+		{`{"foo": {"bar": "baz"}}`, fields{newField("foo", []byte(`{"bar":"baz"}`), "json")}},
+		{`{"foo": {"bar": {"baz": [1,2,3,4]}}}`, fields{newField("foo", []byte(`{"bar":{"baz":[1,2,3,4]}}`), "json")}},
+		{`{"foo": {"bar": 2, "blar": "yup"}}`, fields{newField("foo", []byte(`{"bar":2}`), "json"), newField("foo.blar", "yup", "")}},
+	}
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+	}
+}
+
+func TestRemoveFields(t *testing.T) {
+	dt := newDecoderTester(t, &hekalocal.JSONDecoder{}, &hekalocal.JSONDecoderConfig{
+		Flatten:          true,
+		FlattenToStrings: true,
+		RemoveFields: []string{
+			"foo.bar",
+			"foo.baz.blar",
+		},
+	})
+	cases := []struct {
+		in         string
+		wantFields fields
+	}{
+		{`{}`, nil},
+		{`{"foo": "bar"}`, fields{newField("foo", "bar", "")}},
+		{`{"foo": {"bar": "baz"}}`, nil},
+		{`{"foo": {"bar": {"baz": [1,2,3,4]}}}`, nil},
+		{`{"foo": {"bar": 2, "blar": "yup"}}`, fields{newField("foo.blar", "yup", "")}},
+	}
+
+	for _, c := range cases {
+		dt.testDecode(c.in, c.wantFields)
+	}
+}

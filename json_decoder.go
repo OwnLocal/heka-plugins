@@ -35,6 +35,8 @@ type JSONDecoderConfig struct {
 	FlattenPrefix    string            `toml:"flatten_prefix"`
 	FlattenToStrings bool              `toml:"flatten_to_strings"`
 	MoveFields       map[string]string `toml:"move_fields"`
+	KeepFields       []string          `toml:"keep_fields"`
+	RemoveFields     []string          `toml:"remove_fields"`
 
 	// The message payload will be hashed and made into a UUID along with the timestamp.
 	HashUUID bool `toml:"hash_uuid"`
@@ -46,6 +48,15 @@ type JSONDecoderConfig struct {
 func (jd *JSONDecoder) Init(config interface{}) (err error) {
 	jd.config = config.(*JSONDecoderConfig)
 	jd.config.buildFieldMap()
+	if jd.config.MoveFields == nil {
+		jd.config.MoveFields = make(map[string]string)
+	}
+	for _, path := range jd.config.KeepFields {
+		jd.config.MoveFields[path] = path
+	}
+	for _, path := range jd.config.RemoveFields {
+		jd.config.MoveFields[path] = ""
+	}
 	return
 }
 
@@ -92,7 +103,9 @@ func (jd *JSONDecoder) decodeJSON(jsonStr string, msg *message.Message) error {
 		if !exists {
 			continue
 		}
-		moveMap[to] = val
+		if to != "" {
+			moveMap[to] = val
+		}
 	}
 
 	if jd.config.Flatten {
