@@ -13,8 +13,6 @@ rsync -a --exclude-from .gitignore `pwd`/ .goat/deps/src/github.com/mozilla-serv
 
 pushd .goat/deps/src/github.com/mozilla-services/heka
 echo 'add_external_plugin(git https://github.com/OwnLocal/heka-plugins :local)' > cmake/plugin_loader.cmake
-echo 'install(DIRECTORY "${CMAKE_SOURCE_DIR}/externals/heka-plugins/lua/modules/" DESTINATION "share/${CMAKE_PROJECT_NAME}/lua_modules")' >> CMakeLists.txt
-echo 'install(DIRECTORY "${CMAKE_SOURCE_DIR}/externals/heka-plugins/lua/decoders/" DESTINATION "share/${CMAKE_PROJECT_NAME}/lua_decoders")' >> CMakeLists.txt
 
 source build.sh
 BUILD_NAME=heka_0.9.2-${CIRCLE_BUILD_NUM}_amd64
