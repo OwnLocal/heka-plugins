@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"code.google.com/p/go-uuid/uuid"
+  
+	"github.com/hhkbp2/go-strftime"
 
 	"github.com/mozilla-services/heka/message"
 	"github.com/mozilla-services/heka/pipeline"
@@ -42,7 +44,7 @@ type JSONEncoderConfig struct {
 // ConfigStruct is provided to make JSONEncoder implement the Heka pipeline.HasConfigStruct interface.
 func (enc *JSONEncoder) ConfigStruct() interface{} {
 	return &JSONEncoderConfig{
-		ElasticsearchIndex: "heka-%{2006.01.02}",
+		ElasticsearchIndex: "heka-%Yw%W",
 		ElasticsearchType:  "%{Type}",
 		ElasticsearchID:    "%{UUID}",
 	}
@@ -78,6 +80,7 @@ func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err 
 
 	buf := &bytes.Buffer{}
 	if enc.config.ElasticsearchBulk {
+		enc.coord.Index = strftime.Format(enc.coord.Index, time.Unix(0, *pack.Message.Timestamp).UTC())
 		enc.coord.PopulateBuffer(pack.Message, buf)
 		buf.WriteString("\n")
 	}
