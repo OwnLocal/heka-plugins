@@ -44,7 +44,7 @@ type JSONEncoderConfig struct {
 // ConfigStruct is provided to make JSONEncoder implement the Heka pipeline.HasConfigStruct interface.
 func (enc *JSONEncoder) ConfigStruct() interface{} {
 	return &JSONEncoderConfig{
-		ElasticsearchIndex: "heka-%{2006.01.02}",
+		ElasticsearchIndex: "heka-%Yw%W",
 		ElasticsearchType:  "%{Type}",
 		ElasticsearchID:    "%{UUID}",
 	}
