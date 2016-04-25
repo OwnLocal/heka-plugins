@@ -10,6 +10,7 @@ export GOPATH=`goat env GOPATH`
 
 mkdir -p .goat/deps/src/github.com/mozilla-services/heka/externals
 rsync -a --exclude-from .gitignore `pwd`/ .goat/deps/src/github.com/mozilla-services/heka/externals/heka-plugins/
+rsync -a --exclude-from .gitignore .goat/deps/src/github.com/hhkbp2/go-strftime/ .goat/deps/src/github.com/mozilla-services/heka/build/heka/src/github.com/hhkbp2/go-strftime/
 
 pushd .goat/deps/src/github.com/mozilla-services/heka
 echo 'add_external_plugin(git https://github.com/OwnLocal/heka-plugins :local)' > cmake/plugin_loader.cmake
