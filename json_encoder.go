@@ -65,7 +65,6 @@ func (enc *JSONEncoder) Init(config interface{}) (err error) {
 
 // Encode is implemented to make JSONEncoder implement the pipeline.Encoder interface.
 func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err error) {
-	enc.coord.Index = strftime.Format(enc.coord.Index, time.Now())
 	rawMap := make(map[string]interface{})
 	for _, field := range pack.Message.GetFields() {
 		if field.GetValueType() == message.Field_BYTES && field.GetRepresentation() == "json" {
@@ -81,6 +80,7 @@ func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err 
 
 	buf := &bytes.Buffer{}
 	if enc.config.ElasticsearchBulk {
+		enc.coord.Index = strftime.Format(enc.coord.Index, pack.Message.Timestamp)
 		enc.coord.PopulateBuffer(pack.Message, buf)
 		buf.WriteString("\n")
 	}
