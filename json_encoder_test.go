@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
+	"github.com/pborman/uuid"
 
 	"github.com/OwnLocal/heka-plugins"
 	"github.com/mozilla-services/heka/message"
