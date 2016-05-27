@@ -3,7 +3,7 @@ package hekalocal
 import (
 	"encoding/binary"
 
-	"code.google.com/p/go-uuid/uuid"
+	"github.com/pborman/uuid"
 )
 
 // Most of the code in this file is borrowed from the go-uuid project.

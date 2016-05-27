@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
-  
+	"github.com/pborman/uuid"
+
 	"github.com/hhkbp2/go-strftime"
 
 	"github.com/mozilla-services/heka/message"
