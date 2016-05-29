@@ -80,8 +80,9 @@ func (enc *JSONEncoder) Encode(pack *pipeline.PipelinePack) (output []byte, err 
 
 	buf := &bytes.Buffer{}
 	if enc.config.ElasticsearchBulk {
-		enc.coord.Index = strftime.Format(enc.coord.Index, time.Unix(0, *pack.Message.Timestamp).UTC())
-		enc.coord.PopulateBuffer(pack.Message, buf)
+		coordCopy := *(enc.coord)
+		coordCopy.Index = strftime.Format(enc.coord.Index, time.Unix(0, pack.Message.GetTimestamp()).UTC())
+		coordCopy.PopulateBuffer(pack.Message, buf)
 		buf.WriteString("\n")
 	}
 
