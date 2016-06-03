@@ -187,7 +187,7 @@ func TestAddBulkHeader(t *testing.T) {
 func TestAddBulkHeaderWithWeek(t *testing.T) {
 	conf := &hekalocal.JSONEncoderConfig{
 		ElasticsearchBulk:  true,
-		ElasticsearchIndex: "heka-%Yw%U",
+		ElasticsearchIndex: "heka-%Gw%V",
 		ElasticsearchType:  "%{Type}",
 		ElasticsearchID:    "%{UUID}",
 	}
