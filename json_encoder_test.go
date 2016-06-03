@@ -8,7 +8,7 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/OwnLocal/heka-plugins"
+	hekalocal "github.com/OwnLocal/heka-plugins"
 	"github.com/mozilla-services/heka/message"
 	"github.com/onsi/gomega"
 )
@@ -187,14 +187,14 @@ func TestAddBulkHeader(t *testing.T) {
 func TestAddBulkHeaderWithWeek(t *testing.T) {
 	conf := &hekalocal.JSONEncoderConfig{
 		ElasticsearchBulk:  true,
-		ElasticsearchIndex: "heka-%Yw%W",
+		ElasticsearchIndex: "heka-%Yw%U",
 		ElasticsearchType:  "%{Type}",
 		ElasticsearchID:    "%{UUID}",
 	}
 	et := newEncoderTester(t, &hekalocal.JSONEncoder{}, conf)
 	msg := &message.Message{}
 	msg.SetType("test_log")
-	msg.SetTimestamp(time.Date(2016,  1, 23, 00, 11, 10, 0, time.UTC).UnixNano())
+	msg.SetTimestamp(time.Date(2016, 1, 23, 00, 11, 10, 0, time.UTC).UnixNano())
 	msg.SetUuid(uuid.Parse("de305d54-75b4-431b-adb2-eb6b9e546014"))
 	message.NewStringField(msg, "foo", "bar")
 
@@ -203,11 +203,11 @@ func TestAddBulkHeaderWithWeek(t *testing.T) {
 		et.t.Error(err)
 	}
 	parts := bytes.Split(encoded, []byte("\n"))
-	gomega.Expect(parts[0]).To(gomega.MatchJSON(`{"index": {"_index": "heka-2016w04", "_type": "test_log", "_id":"de305d54-75b4-431b-adb2-eb6b9e546014"}}`))
+	gomega.Expect(parts[0]).To(gomega.MatchJSON(`{"index": {"_index": "heka-2016w03", "_type": "test_log", "_id":"de305d54-75b4-431b-adb2-eb6b9e546014"}}`))
 	gomega.Expect(parts[1]).To(gomega.MatchJSON(`{"foo": "bar"}`))
 
 	// Encoding again with a different timestamp should give the correct timestamp
-	msg.SetTimestamp(time.Date(2017,  1, 23, 00, 11, 10, 0, time.UTC).UnixNano())
+	msg.SetTimestamp(time.Date(2017, 1, 23, 00, 11, 10, 0, time.UTC).UnixNano())
 	encoded, err = et.doEncode(msg)
 	if err != nil {
 		et.t.Error(err)

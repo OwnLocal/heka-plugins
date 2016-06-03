@@ -7,7 +7,7 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/hhkbp2/go-strftime"
+	"github.com/OwnLocal/go-strftime"
 
 	"github.com/mozilla-services/heka/message"
 	"github.com/mozilla-services/heka/pipeline"
